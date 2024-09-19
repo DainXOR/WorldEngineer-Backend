@@ -1,4 +1,4 @@
-module github.com/we-back-go
+module dainxor/we
 
 go 1.23.1
 

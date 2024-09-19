@@ -1,6 +1,8 @@
 package main
 
 import (
+	test "dainxor/we/test"
+
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +19,11 @@ func main() {
 			})
 		})
 
+		testRouter.GET("/get", test.Get)
+		testRouter.POST("/post", test.Post)
+		testRouter.PUT("/put", test.Put)
+		testRouter.DELETE("/del", test.Delete)
+		testRouter.PATCH("/patch", test.Patch)
 	}
 
 	//v1 := router.Group("/v1")
