@@ -27,7 +27,7 @@ func corsOwn() gin.HandlerFunc {
 
 func corsLib() gin.HandlerFunc {
 	return cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "https://fuzzy-fiesta-g6xqxp4w6vw296v-3000.app.github.dev/"},
+		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		AllowCredentials: true,
