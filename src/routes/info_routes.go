@@ -19,6 +19,7 @@ func InfoRoutes(router *gin.Engine) {
 		"info test patch":    "/api/info/patch",
 		"info test delete":   "/api/info/del",
 
+		"register email":        "/api/v0/user/register/:email",
 		"user create":           "/api/v0/user/",
 		"user get all":          "/api/v0/user/all/",
 		"user get by id":        "/api/v0/user/id/:id",

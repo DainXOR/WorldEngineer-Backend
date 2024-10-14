@@ -9,6 +9,7 @@ import (
 type UserDB struct {
 	gorm.Model
 	ID              uint      `json:"id" gorm:"primaryKey"`
+	NameTag         string    `json:"name_tag" gorm:"not null"`
 	Username        string    `json:"username" gorm:"not null"`
 	Email           string    `json:"email" gorm:"not null"`
 	CreatedAt       time.Time `json:"created_at" gorm:"not null"`
@@ -19,6 +20,7 @@ type UserDB struct {
 
 type UserResponse struct {
 	ID       uint   `json:"id"`
+	NameTag  string `json:"name_tag"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	IDStatus uint   `json:"id_status"`

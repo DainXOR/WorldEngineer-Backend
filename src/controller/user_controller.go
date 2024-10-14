@@ -4,6 +4,8 @@ import (
 	"dainxor/we/configs"
 	"dainxor/we/logger"
 	"dainxor/we/models"
+	"dainxor/we/utils"
+
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +25,7 @@ func UserCreate(c *gin.Context) {
 		return
 	}
 
+	user.NameTag = utils.GenerateUserTag(body.Username)
 	user.Username = body.Username
 	user.Email = body.Email
 	user.CreatedAt = configs.DB.NowFunc()
@@ -35,6 +38,7 @@ func UserCreate(c *gin.Context) {
 	c.JSON(http.StatusCreated,
 		models.UserResponse{
 			ID:       user.ID,
+			NameTag:  user.NameTag,
 			Username: user.Username,
 			Email:    user.Email,
 			IDStatus: user.IDStatus,
@@ -48,7 +52,7 @@ func UserGetAll(c *gin.Context) {
 	configs.DB.Find(&users)
 
 	for _, user := range users {
-		response = append(response, models.UserResponse{ID: user.ID, Username: user.Username, Email: user.Email, IDStatus: user.IDStatus})
+		response = append(response, models.UserResponse{ID: user.ID, NameTag: user.NameTag, Username: user.Username, Email: user.Email, IDStatus: user.IDStatus})
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -63,6 +67,7 @@ func UserGetByID(c *gin.Context) {
 	c.JSON(http.StatusOK,
 		models.UserResponse{
 			ID:       user.ID,
+			NameTag:  user.NameTag,
 			Username: user.Username,
 			Email:    user.Email,
 			IDStatus: user.IDStatus,
@@ -80,6 +85,7 @@ func UserGetByStatusID(c *gin.Context) {
 		response = append(response,
 			models.UserResponse{
 				ID:       user.ID,
+				NameTag:  user.NameTag,
 				Username: user.Username,
 				Email:    user.Email,
 				IDStatus: user.IDStatus,
@@ -116,6 +122,7 @@ func UserUpdateByID(c *gin.Context) {
 	c.JSON(http.StatusOK,
 		models.UserResponse{
 			ID:       user.ID,
+			NameTag:  user.NameTag,
 			Username: user.Username,
 			Email:    user.Email,
 			IDStatus: user.IDStatus,

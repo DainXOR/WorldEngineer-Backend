@@ -1,12 +1,13 @@
 package middleware
 
 import (
-	"github.com/gin-contrib/cors"
+	ccors "github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	jcors "github.com/itsjamie/gin-cors"
 )
 
 func CORSMiddleware() gin.HandlerFunc {
-	return corsLib()
+	return corsJamie()
 }
 
 func corsOwn() gin.HandlerFunc {
@@ -26,10 +27,20 @@ func corsOwn() gin.HandlerFunc {
 }
 
 func corsLib() gin.HandlerFunc {
-	return cors.New(cors.Config{
+	return ccors.New(ccors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		AllowCredentials: true,
+	})
+}
+
+func corsJamie() gin.HandlerFunc {
+	return jcors.Middleware(jcors.Config{
+		Origins:         "*",
+		Methods:         "GET, PUT, POST, DELETE",
+		RequestHeaders:  "Origin, Content-Type, Content-Length",
+		Credentials:     true,
+		ValidateHeaders: false,
 	})
 }

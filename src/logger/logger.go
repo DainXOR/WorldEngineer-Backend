@@ -16,56 +16,56 @@ const (
 	NONE = 0
 )
 
-var (
-	// debugLogger is a logger for debug logs
-	debugLogger *log.Logger
-	// infoLogger is a logger for info logs
-	infoLogger *log.Logger
-	// warningLogger is a logger for warning logs
-	warningLogger *log.Logger
-	// errorLogger is a logger for error logs
-	errorLogger *log.Logger
-	// fatalLogger is a logger for fatal logs
-	fatalLogger *log.Logger
+type dnxLogger struct {
+	DebugLogger   *log.Logger
+	InfoLogger    *log.Logger
+	WarningLogger *log.Logger
+	ErrorLogger   *log.Logger
+	FatalLogger   *log.Logger
 
-	logToFile    bool
-	logToConsole bool
-	logOptions   int
-)
+	LogToFile    bool
+	LogToConsole bool
+	LogOptions   int
+}
 
-func init() {
-	logToFile = true
-	logToConsole = true
-	logOptions = ALL
+var dnxLoggerInstance *dnxLogger
 
-	debugLogger = log.New(os.Stdout, "[DEBUG] ", log.LstdFlags|log.Lshortfile)
-	infoLogger = log.New(os.Stdout, "[INFO] ", log.LstdFlags|log.Lshortfile)
-	warningLogger = log.New(os.Stdout, "[WARNING] ", log.LstdFlags|log.Lshortfile)
-	errorLogger = log.New(os.Stderr, "[ERROR] ", log.LstdFlags|log.Lshortfile)
-	fatalLogger = log.New(os.Stderr, "[FATAL] ", log.LstdFlags|log.Lshortfile)
+func Init() {
+
+	dnxLoggerInstance = &dnxLogger{
+		LogToFile:    true,
+		LogToConsole: true,
+		LogOptions:   ALL,
+
+		DebugLogger:   log.New(os.Stdout, "[DEBUG] ", log.LstdFlags|log.Lshortfile),
+		InfoLogger:    log.New(os.Stdout, "[INFO] ", log.LstdFlags|log.Lshortfile),
+		WarningLogger: log.New(os.Stdout, "[WARNING] ", log.LstdFlags|log.Lshortfile),
+		ErrorLogger:   log.New(os.Stderr, "[ERROR] ", log.LstdFlags|log.Lshortfile),
+		FatalLogger:   log.New(os.Stderr, "[FATAL] ", log.LstdFlags|log.Lshortfile),
+	}
 }
 
 func LogsToFile() bool {
-	return logToFile
+	return dnxLoggerInstance.LogToFile
 }
 func SetLogToFile(value bool) {
 	Info("File logging set to", value)
-	logToFile = value
+	dnxLoggerInstance.LogToFile = value
 }
 
 func LogsToConsole() bool {
-	return logToConsole
+	return dnxLoggerInstance.LogToConsole
 }
 func SetLogToConsole(value bool) {
 	Info("Console logging set to", value)
-	logToConsole = value
+	dnxLoggerInstance.LogToConsole = value
 }
 
-func LogOptionsSet() int {
-	return logOptions
+func LogOptions() int {
+	return dnxLoggerInstance.LogOptions
 }
 func LogOptionsHas(option int) bool {
-	return logOptions&option == option
+	return LogOptions()&option == option
 }
 func SetLogOptions(options int) {
 	if options < NONE || options > ALL {
@@ -99,60 +99,84 @@ func SetLogOptions(options int) {
 
 	Info(msg)
 
-	logOptions = options
+	dnxLoggerInstance.LogOptions = options
 }
-func EnableLogOption(option int) {
-	if option < NONE || option > ALL {
+func EnableLogOptions(options int) {
+	if options < NONE || options > ALL {
 		Warning("Invalid logging option")
 		return
 	}
 
-	var value string
+	var msg string
 
-	if option&DEBUG == DEBUG {
-		value = "DEBUG"
-	} else if option&INFO == INFO {
-		value = "INFO"
-	} else if option&WARNING == WARNING {
-		value = "WARNING"
-	} else if option&ERROR == ERROR {
-		value = "ERROR"
-	} else if option&FATAL == FATAL {
-		value = "FATAL"
+	if options&DEBUG == DEBUG {
+		msg += "| DEBUG |"
+	}
+	if options&INFO == INFO {
+		msg += "| INFO |"
+	}
+	if options&WARNING == WARNING {
+		msg += "| WARNING |"
+	}
+	if options&ERROR == ERROR {
+		msg += "| ERROR |"
+	}
+	if options&FATAL == FATAL {
+		msg += "| FATAL |"
 	}
 
-	Info("Enabled logging option: ", value)
-	logOptions |= option
+	Info("Enabled logging options: ", msg)
+	dnxLoggerInstance.LogOptions |= options
 }
-func DisableLogOption(option int) {
-	if option < NONE || option > ALL {
+func DisableLogOptions(options int) {
+	if options < NONE || options > ALL {
 		Warning("Invalid logging option")
 		return
 	}
 
-	var value string
+	var msg string
 
-	if option&DEBUG == DEBUG {
-		value = "DEBUG"
-	} else if option&INFO == INFO {
-		value = "INFO"
-	} else if option&WARNING == WARNING {
-		value = "WARNING"
-	} else if option&ERROR == ERROR {
-		value = "ERROR"
-	} else if option&FATAL == FATAL {
-		value = "FATAL"
+	if options&DEBUG == DEBUG {
+		msg += "| DEBUG |"
+	}
+	if options&INFO == INFO {
+		msg += "| INFO |"
+	}
+	if options&WARNING == WARNING {
+		msg += "| WARNING |"
+	}
+	if options&ERROR == ERROR {
+		msg += "| ERROR |"
+	}
+	if options&FATAL == FATAL {
+		msg += "| FATAL |"
 	}
 
-	Info("Disabled logging option: ", value)
-	logOptions &= ^option
+	Info("Disabled logging options: ", msg)
+	dnxLoggerInstance.LogOptions &= ^options
+}
+
+func canLogWith(logger *log.Logger) bool {
+	if logger == dnxLoggerInstance.DebugLogger && !LogOptionsHas(DEBUG) {
+		return false
+	} else if logger == dnxLoggerInstance.InfoLogger && !LogOptionsHas(INFO) {
+		return false
+	} else if logger == dnxLoggerInstance.WarningLogger && !LogOptionsHas(WARNING) {
+		return false
+	} else if logger == dnxLoggerInstance.ErrorLogger && !LogOptionsHas(ERROR) {
+		return false
+	} else if logger == dnxLoggerInstance.FatalLogger && !LogOptionsHas(FATAL) {
+		return false
+	}
+
+	return true
 }
 
 func writeToFile(prefix string, v ...interface{}) {
 	file, err := os.OpenFile("logs.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 
 	if err != nil {
-		error(false, "Failed to open log file")
+		logError(false, "Failed to open log file")
 		return
 	}
 	defer file.Close()
@@ -160,66 +184,51 @@ func writeToFile(prefix string, v ...interface{}) {
 	logger := log.New(file, prefix, log.LstdFlags|log.Lshortfile)
 	logger.Println(v...)
 }
-func canLogWith(logger *log.Logger) bool {
-	if logger == debugLogger && !LogOptionsHas(DEBUG) {
-		return false
-	} else if logger == infoLogger && !LogOptionsHas(INFO) {
-		return false
-	} else if logger == warningLogger && !LogOptionsHas(WARNING) {
-		return false
-	} else if logger == errorLogger && !LogOptionsHas(ERROR) {
-		return false
-	} else if logger == fatalLogger && !LogOptionsHas(FATAL) {
-		return false
-	}
-
-	return true
-}
 
 func logWith(logger *log.Logger, ForceWriteFile bool, v ...interface{}) {
 	if !canLogWith(logger) {
 		return
 	}
 
-	if logToConsole {
+	if dnxLoggerInstance.LogToConsole {
 		logger.Println(v...)
 	}
 
-	if ForceWriteFile || logToFile {
+	if ForceWriteFile || dnxLoggerInstance.LogToFile {
 		writeToFile(logger.Prefix(), v...)
 	}
 }
 
-func Debug(v ...interface{}) {
-	logWith(debugLogger, true, v...)
+func logDebug(writeFile bool, v ...interface{}) {
+	logWith(dnxLoggerInstance.DebugLogger, writeFile, v...)
 }
-func Info(v ...interface{}) {
-	logWith(infoLogger, true, v...)
+func logInfo(writeFile bool, v ...interface{}) {
+	logWith(dnxLoggerInstance.InfoLogger, writeFile, v...)
 }
-func Warning(v ...interface{}) {
-	logWith(warningLogger, true, v...)
+func logWarning(writeFile bool, v ...interface{}) {
+	logWith(dnxLoggerInstance.WarningLogger, writeFile, v...)
 }
-func Error(v ...interface{}) {
-	logWith(errorLogger, true, v...)
+func logError(writeFile bool, v ...interface{}) {
+	logWith(dnxLoggerInstance.ErrorLogger, writeFile, v...)
 }
-func Fatal(v ...interface{}) {
-	logWith(fatalLogger, true, v...)
+func logFatal(writeFile bool, v ...interface{}) {
+	logWith(dnxLoggerInstance.FatalLogger, writeFile, v...)
 	os.Exit(1)
 }
 
-func debug(writeFile bool, v ...interface{}) {
-	logWith(debugLogger, writeFile, v...)
+func Debug(v ...interface{}) {
+	logDebug(false, v...)
 }
-func info(writeFile bool, v ...interface{}) {
-	logWith(infoLogger, writeFile, v...)
+func Info(v ...interface{}) {
+	logInfo(false, v...)
 }
-func warning(writeFile bool, v ...interface{}) {
-	logWith(warningLogger, writeFile, v...)
+func Warning(v ...interface{}) {
+	logWarning(false, v...)
 }
-func error(writeFile bool, v ...interface{}) {
-	logWith(errorLogger, writeFile, v...)
+func Error(v ...interface{}) {
+	logError(false, v...)
 }
-func fatal(writeFile bool, v ...interface{}) {
-	logWith(fatalLogger, writeFile, v...)
+func Fatal(v ...interface{}) {
+	logFatal(false, v...)
 	os.Exit(1)
 }
