@@ -3,9 +3,9 @@ package models
 import "dainxor/we/types"
 
 type ErrorResponse struct {
-	Code    types.HttpCode `json:"code" default:"400"`
-	Type    string         `json:"type"`
-	Message string         `json:"message"`
+	Code    types.HttpCode `json:"code" default:"500"`
+	Type    string         `json:"type" default:"internal"`
+	Message string         `json:"message" default:""`
 	Detail  string         `json:"detail" default:""`
 }
 

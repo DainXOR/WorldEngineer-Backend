@@ -67,21 +67,23 @@ func VerifyEmailAddress(email string) types.Optional[models.ErrorResponse] {
 			),
 		)
 	}
-	if result.Suggestion != "" {
-		logger.Warning("Unreachable email address")
-		logger.Warning("Suggestion: ", result.Suggestion)
-		return types.OptionalOf(
-			models.Error(
-				http.StatusBadRequest,
-				"suggestion",
-				"email address is not reachable",
-				result.Suggestion,
-			),
-		)
-	}
+
 	// possible return string values: yes, no, unkown
 	if result.Reachable == "no" {
 		logger.Warning("Unreachable email address")
+
+		if result.Suggestion != "" {
+			logger.Warning("Suggestion:", result.Suggestion)
+			return types.OptionalOf(
+				models.Error(
+					http.StatusBadRequest,
+					"suggestion",
+					"email address is not reachable",
+					result.Suggestion,
+				),
+			)
+		}
+
 		return types.OptionalOf(
 			models.Error(
 				http.StatusBadRequest,

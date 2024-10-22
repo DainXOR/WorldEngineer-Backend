@@ -9,5 +9,5 @@ func HasCode(email string) bool {
 	var codeDB models.AuthCodeDB
 	configs.DB.Where("email = ?", email).First(&codeDB, "created_at >= NOW() - INTERVAL '5 minutes'")
 
-	return codeDB.Code != 0
+	return codeDB.ID != 0
 }

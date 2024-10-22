@@ -5,6 +5,7 @@ import (
 	"dainxor/we/models"
 	"dainxor/we/types"
 	"dainxor/we/utils"
+
 	"strconv"
 )
 
@@ -87,7 +88,7 @@ func CreateUser(user models.UserCreate) types.Result[models.UserDB, models.Error
 	}
 
 	var newUser models.UserDB
-	newUser.NameTag = utils.GenerateUserTag(user.Username)
+	newUser.NameTag = utils.UserTagGenerate(user.Username)
 	newUser.Username = user.Username
 	newUser.Email = user.Email
 	newUser.CreatedAt = configs.DB.NowFunc()
@@ -187,7 +188,7 @@ func UpdateAllFilteredUsers(user models.UserUpdate, predicate types.Predicate[mo
 			types.Http.InternalServerError(),
 			"internal",
 			"Users not updated",
-			types.Reduce(errored, func(r string, u models.UserDB) string { return r + string(u.ID) }, ""),
+			types.Reduce(errored, func(r string, u models.UserDB) string { return r + strconv.Itoa(int(u.ID)) }, ""),
 		)
 
 		return types.ResultOf(users, err, len(errored) == 0)
@@ -300,7 +301,7 @@ func DeleteAllFilteredUsers(predicate types.Predicate[models.UserDB]) types.Resu
 		types.Http.InternalServerError(),
 		"internal",
 		"Users not deleted",
-		types.Reduce(errored, func(r string, u models.UserDB) string { return r + string(u.ID) }, ""),
+		types.Reduce(errored, func(r string, u models.UserDB) string { return r + strconv.Itoa(int(u.ID)) }, ""),
 	)
 
 	return types.ResultOf(result.Value(), err, len(errored) == 0)

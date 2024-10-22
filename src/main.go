@@ -24,6 +24,7 @@ func main() {
 	routes.InfoRoutes(router)
 	routes.TestRoutes(router)
 
+	routes.AuthRoutes(router)
 	routes.UserRoutes(router)
 	routes.ProjectRoutes(router)
 

@@ -4,38 +4,49 @@ import (
 	"dainxor/we/configs"
 	"dainxor/we/logger"
 	"dainxor/we/models"
+	"dainxor/we/types"
 	"dainxor/we/utils"
 
 	"crypto/rand"
 	"math/big"
 )
 
-func GenerateCode() uint {
-	offset := uint(100000)
-
-	bigIntCode := utils.RetryOrPanic(
+func GenerateCode() types.Result[string, models.ErrorResponse] {
+	bigIntCode, err := utils.Retry(
 		func() (*big.Int, error) {
-			return rand.Int(rand.Reader, big.NewInt(int64(999999-offset)))
+			return rand.Int(rand.Reader, big.NewInt(999999))
 		},
 		3,
 		"Failed to generate verification code: ",
 		"Could not generate verification code: ",
 	)
 
-	return uint(bigIntCode.Int64()) + offset
+	if err != nil {
+		logger.Error(err.Error())
+		return types.ResultErr[string](models.Error(
+			types.Http.InternalServerError(),
+			"internal",
+			"Failed to generate verification code",
+		))
+	}
+
+	code := utils.FillZeros(int(bigIntCode.Int64()), 6)
+	return types.ResultOk[string, models.ErrorResponse](code)
 }
 
-func VerifyCode(email string, codeToVerify uint) bool {
+func VerifyCode(email string, code string) bool {
 	var codeDB models.AuthCodeDB
 	logger.Info("Verifying email: ", email)
 	configs.DB.Where("email = ?", email).First(&codeDB, "created_at >= NOW() - INTERVAL '5 minutes'")
 
 	if codeDB.ID == 0 {
-		logger.Error("Failed to verify email: Missing email in database")
+		logger.Error("Failed to verify email: No valid code found for email provided")
+		DeleteExpiredCodes(email)
+
 		return false
 	}
 
-	res := codeDB.Code == codeToVerify
+	res := codeDB.Code == code
 
 	if res {
 		logger.Info("Email verified")
@@ -47,7 +58,18 @@ func VerifyCode(email string, codeToVerify uint) bool {
 	return res
 }
 
-func DeleteCode(email string, code uint) {
+func DeleteCode(email string, code string) {
 	var codeDB models.AuthCodeDB
 	configs.DB.Where("email = ?", email).Delete(&codeDB)
+}
+
+func DeleteExpiredCodes(email string) {
+	var codes []models.AuthCodeDB
+
+	logger.Info("Deleting expired code for email: ", email)
+	configs.DB.Where("email = ?", email).Find(&codes, "created_at < NOW() - INTERVAL '5 minutes'")
+
+	for _, c := range codes {
+		configs.DB.Delete(c)
+	}
 }

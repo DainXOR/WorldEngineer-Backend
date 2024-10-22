@@ -10,6 +10,8 @@ func init() {
 }
 
 func main() {
+	configs.DB.AutoMigrate(&models.AuthCodeDB{})
 	configs.DB.AutoMigrate(&models.UserDB{})
 	configs.DB.AutoMigrate(&models.ProjectDB{})
+
 }

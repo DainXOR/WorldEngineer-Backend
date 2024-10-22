@@ -2,6 +2,7 @@ package utils
 
 import (
 	"dainxor/we/logger"
+	"strconv"
 	"time"
 )
 
@@ -26,17 +27,31 @@ func Retry[T any](callback func() (T, error), retryAttemps int, failMsg string, 
 
 	if err != nil {
 		logger.Error(finalMsg, err)
+		return result, err
 	}
 
-	return result, err
+	logger.Info("Success after ", failCount, " retries")
+	return result, nil
 }
 
 func RetryOrPanic[T any](callback func() (T, error), times int, failMsg string, finalMsg string) T {
 	result, err := Retry(callback, times, failMsg, finalMsg)
 
 	if err != nil {
-		panic(err)
+		logger.Fatal("Can not recover, closing the server...", err)
 	}
 
 	return result
+}
+
+func FillZeros(number int, length int) string {
+	numberStr := strconv.Itoa(number)
+	numberLen := len(numberStr)
+	zeros := length - numberLen
+
+	for i := 0; i < zeros; i++ {
+		numberStr = "0" + numberStr
+	}
+
+	return numberStr
 }
