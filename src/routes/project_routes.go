@@ -7,19 +7,15 @@ import (
 )
 
 func ProjectRoutes(router *gin.Engine) {
-	projectRouter := router.Group("api/v0/user")
+	projectRouter := router.Group("api/v0/project")
 	{
-		projectRouter.POST("/register/:email", controller.UserTryRegister)
-		projectRouter.POST("/login/:email", controller.UserTryLogin)
-		projectRouter.POST("/", controller.UserCreate)
+		projectRouter.GET("/all/", controller.User.GetAll)
+		projectRouter.GET("/id/:id", controller.User.GetByID)
+		projectRouter.GET("/id-status/:id", controller.User.GetAllByStatusID)
 
-		projectRouter.GET("/all/", controller.UserGetAll)
-		projectRouter.GET("/id/:id", controller.UserGetByID)
-		projectRouter.GET("/id-status/:id", controller.UserGetByStatusID)
+		projectRouter.PUT("/id/:id", controller.User.UpdateByID)
 
-		projectRouter.PUT("/id/:id", controller.UserUpdateByID)
-
-		projectRouter.DELETE("/id/:id", controller.UserDeleteByID)
+		projectRouter.DELETE("/id/:id", controller.User.DeleteByID)
 
 	}
 }

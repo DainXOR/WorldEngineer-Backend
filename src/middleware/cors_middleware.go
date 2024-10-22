@@ -37,10 +37,10 @@ func corsLib() gin.HandlerFunc {
 
 func corsJamie() gin.HandlerFunc {
 	return jcors.Middleware(jcors.Config{
-		Origins:         "*",
+		Origins:         "*", // Change to "http://localhost:3000, https://fuzzy-fiesta-g6xqxp4w6vw296v-3000.app.github.dev/"
 		Methods:         "GET, PUT, POST, DELETE",
 		RequestHeaders:  "Origin, Content-Type, Content-Length",
-		Credentials:     true,
+		Credentials:     false, // Change to true
 		ValidateHeaders: false,
 	})
 }

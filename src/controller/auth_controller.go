@@ -2,9 +2,11 @@ package controller
 
 import (
 	"dainxor/we/auth"
+	"dainxor/we/db"
 	"dainxor/we/logger"
 	"dainxor/we/mail"
 	"dainxor/we/models"
+	"dainxor/we/types"
 	"dainxor/we/utils"
 	"net/http"
 	"strconv"
@@ -15,19 +17,22 @@ import (
 func UserTryRegister(c *gin.Context) {
 	email := c.Param("email")
 
-	if utils.EmailUsed(email) {
+	if result := db.GetUserByEmail(email); result.IsOk() {
 		logger.Error("Failed to create user: Email is already in use")
 		c.JSON(http.StatusBadRequest,
-			models.ErrorResponse{
-				Type:    "bad_request",
-				Message: "Email is already in use",
-			},
+			models.Error(
+				types.Http.BadRequest(),
+				"bad_request",
+				"Email is already in use",
+			),
 		)
 		return
 	}
 
 	// Send email to user
-	if !mail.VerifyEmailAddress(c, email) {
+	if result := mail.VerifyEmailAddress(email); result.IsPresent() {
+		result := result.Get()
+		c.JSON(result.Code.Get(), result)
 		return
 	}
 

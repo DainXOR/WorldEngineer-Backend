@@ -12,6 +12,10 @@ import (
 )
 
 func SendTestEmail1(c *gin.Context) {
+
+	logger.Warning("This test is disabled")
+	return
+
 	mail := models.MailSend{}
 	mail.Receiver("daniel.leond@udea.edu.co")
 	mail.Receiver("dainxor@gmail.com")
@@ -22,20 +26,22 @@ func SendTestEmail1(c *gin.Context) {
 }
 
 func SendTestEmail2(c *gin.Context) {
+
+	logger.Warning("This test is disabled")
+	return
+
 	mail := models.MailSend{}
 	mail.Receiver("dleon_2407@hotmail.com")
 	mail.Receiver("dannyleon2001@hotmail.com")
 	mail.Title("Hola mama :P")
 	mail.MsgLine("Ando haciendo un trabajo y estoy intentando mandar correos de verificacion.")
 	mail.MsgLine("Como lo esta leyendo, es que funciono :D")
+	mail.MsgLine("Los quiero <3")
 
 	SendEmail(c, mail)
 }
 
 func SendEmail(c *gin.Context, mail models.MailSend) error {
-
-	return nil
-
 	username := "api"
 	password := "20a57210c28ca0c202f5192e7f06d339"
 	smtpHost := "live.smtp.mailtrap.io"

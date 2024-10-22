@@ -11,12 +11,13 @@ import (
 
 func SendAuthMail(c *gin.Context, email string) {
 	if auth.HasCode(email) {
-		c.JSON(http.StatusConflict, gin.H{
-			"type":    "conflict",
-			"message": "Email is already in use",
-			"hint":    "Check your email for the verification code, or try again in a few minutes",
-			"extra":   "Try looking in your spam folder",
-		})
+		c.JSON(http.StatusConflict,
+			models.ErrorResponse{
+				Type:    "conflict",
+				Message: "Email is already in use",
+				Detail:  "Check your email for the verification code, or try again in a few minutes",
+				//Extra:   "Try looking in your spam folder",
+			})
 
 		return
 	}

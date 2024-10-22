@@ -26,6 +26,16 @@ type UserResponse struct {
 	IDStatus uint   `json:"id_status"`
 }
 
+func (user UserDB) ToResponse() UserResponse {
+	return UserResponse{
+		ID:       user.ID,
+		NameTag:  user.NameTag,
+		Username: user.Username,
+		Email:    user.Email,
+		IDStatus: user.IDStatus,
+	}
+}
+
 type UserCreate struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
@@ -34,7 +44,7 @@ type UserCreate struct {
 type UserUpdate struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
-	IDStatus int    `json:"id_status"`
+	IDStatus uint   `json:"id_status"`
 }
 
 func (u *UserDB) TableName() string {
