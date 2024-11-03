@@ -1,7 +1,7 @@
 package mail
 
 import (
-	"dainxor/we/logger"
+	"dainxor/we/base/logger"
 	"dainxor/we/models"
 	"dainxor/we/types"
 

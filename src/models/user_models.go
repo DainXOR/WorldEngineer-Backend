@@ -39,6 +39,7 @@ func (user UserDB) ToResponse() UserResponse {
 type UserCreate struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
+	NameTag  string `json:"name_tag"`
 }
 
 type UserUpdate struct {

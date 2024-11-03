@@ -1,8 +1,8 @@
 package controller
 
 import (
+	"dainxor/we/base/logger"
 	"dainxor/we/db"
-	"dainxor/we/logger"
 	"dainxor/we/models"
 	"dainxor/we/types"
 
@@ -31,10 +31,10 @@ func (userType) Create(c *gin.Context) {
 				"Email is already in use",
 				"Expected body: {username: string, email: string}",
 			))
-
+		return
 	}
 
-	result := db.CreateUser(body)
+	result := db.User.CreateUser(body)
 
 	if result.IsErr() {
 		err := result.Error()
@@ -47,7 +47,7 @@ func (userType) Create(c *gin.Context) {
 }
 
 func (userType) GetAll(c *gin.Context) {
-	result := db.GetAllUsers()
+	result := db.User.GetAllUsers()
 
 	if result.IsErr() {
 		err := result.Error()
@@ -61,7 +61,7 @@ func (userType) GetAll(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 func (userType) GetByID(c *gin.Context) {
-	result := db.GetUserByID(c.Param("id"))
+	result := db.User.GetUserByID(c.Param("id"))
 
 	if result.IsErr() {
 		err := result.Error()
@@ -73,7 +73,7 @@ func (userType) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, user.ToResponse())
 }
 func (userType) GetAllByStatusID(c *gin.Context) {
-	result := db.GetAllUsersByStatusID(c.Param("id"))
+	result := db.User.GetAllUsersByStatusID(c.Param("id"))
 
 	if result.IsErr() {
 		err := result.Error()
@@ -105,7 +105,7 @@ func (userType) UpdateByID(c *gin.Context) {
 		return
 	}
 
-	response := db.UpdateUserByID(c.Param("id"), body)
+	response := db.User.UpdateUserByID(c.Param("id"), body)
 
 	if response.IsErr() {
 		err := response.Error()
@@ -116,7 +116,7 @@ func (userType) UpdateByID(c *gin.Context) {
 	c.JSON(http.StatusOK, response.Value().ToResponse())
 }
 func (userType) DeleteByID(c *gin.Context) {
-	result := db.DeleteUserByID(c.Param("id"))
+	result := db.User.DeleteUserByID(c.Param("id"))
 
 	if result.IsErr() {
 		c.JSON(http.StatusInternalServerError, result.Error())

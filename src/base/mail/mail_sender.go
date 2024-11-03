@@ -1,15 +1,45 @@
 package mail
 
 import (
-	"dainxor/we/logger"
+	"dainxor/we/base/logger"
 	"dainxor/we/models"
 	"dainxor/we/types"
 	"dainxor/we/utils"
+	"os"
 
 	"net/smtp"
 
 	"github.com/gin-gonic/gin"
 )
+
+var credentials models.SMTPCredentials
+
+func LoadCredentials() types.Optional[models.ErrorResponse] {
+	username, ok1 := os.LookupEnv("SMTP_USERNAME")
+	password, ok2 := os.LookupEnv("SMTP_PASSWORD")
+	smtpHost, ok3 := os.LookupEnv("SMTP_HOST")
+	smtpPort, ok4 := os.LookupEnv("SMTP_PORT")
+	email, ok5 := os.LookupEnv("SMTP_EMAIL")
+
+	if !ok1 || !ok2 || !ok3 || !ok4 || !ok5 {
+		return types.OptionalOf(models.Error(
+			types.Http.InternalServerError(),
+			"send_email",
+			"Failed to send email",
+			"SMTP credentials missing",
+		))
+	}
+
+	credentials = models.SMTPCredentials{
+		Username: username,
+		Password: password,
+		SMTPHost: smtpHost,
+		SMTPPort: smtpPort,
+		Email:    email,
+	}
+
+	return types.OptionalEmpty[models.ErrorResponse]()
+}
 
 func SendTestEmail1(*gin.Context) {
 	logger.Warning("This test is disabled")
@@ -42,16 +72,17 @@ func SendTestEmail2(*gin.Context) {
 }
 
 func SendEmail(mail models.MailSend) types.Optional[models.ErrorResponse] {
-	username := "api"
-	password := "20a57210c28ca0c202f5192e7f06d339"
-	smtpHost := "live.smtp.mailtrap.io"
-	smtpPort := "587"
+	username := credentials.Username
+	password := credentials.Password
+	smtpHost := credentials.SMTPHost
+	smtpPort := credentials.SMTPPort
+	email := credentials.Email
 
 	auth := smtp.PlainAuth("", username, password, smtpHost)
 
 	smtpUrl := smtpHost + ":" + smtpPort
 
-	mail.Sender("sign.we@fardina143.co")
+	mail.Sender(email)
 	logger.Info("Sending email from: ", mail.From)
 
 	_, err := utils.Retry(

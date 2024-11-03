@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"dainxor/we/configs"
-	"dainxor/we/logger"
+	"dainxor/we/base/configs"
+	"dainxor/we/base/logger"
 	"dainxor/we/models"
 
 	"net/http"
@@ -31,10 +31,10 @@ func ProjectCreate(c *gin.Context) {
 
 	// Manually create project settings on the database
 	projectSettings.Public = newProjectSettings.Public
-	projectSettings.CreatedAt = configs.DB.NowFunc()
-	projectSettings.UpdatedAt = configs.DB.NowFunc()
+	projectSettings.CreatedAt = configs.DataBase.NowFunc()
+	projectSettings.UpdatedAt = configs.DataBase.NowFunc()
 
-	configs.DB.Create(&projectSettings)
+	configs.DataBase.Create(&projectSettings)
 
 	// Send a temporary redirect to the project settings POST endpoint
 	//c.JSON(http.StatusTemporaryRedirect, newProjectSettings)
@@ -58,13 +58,13 @@ func ProjectCreate(c *gin.Context) {
 	project.Name = body.Name
 	project.Description = body.Description
 	project.IDCreator = body.IDCreator
-	project.CreatedAt = configs.DB.NowFunc()
-	project.UpdatedAt = configs.DB.NowFunc()
+	project.CreatedAt = configs.DataBase.NowFunc()
+	project.UpdatedAt = configs.DataBase.NowFunc()
 	project.IDStatus = 1
-	project.StatusTimeStamp = configs.DB.NowFunc()
+	project.StatusTimeStamp = configs.DataBase.NowFunc()
 	project.IDSettings = projectSettings.ID
 
-	configs.DB.Create(&project)
+	configs.DataBase.Create(&project)
 
 	c.JSON(http.StatusCreated,
 		models.ProjectResponse{

@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"dainxor/we/configs"
-	"dainxor/we/logger"
+	"dainxor/we/base/configs"
+	"dainxor/we/base/logger"
 	"dainxor/we/models"
 	"dainxor/we/types"
 	"dainxor/we/utils"
@@ -37,7 +37,7 @@ func GenerateCode() types.Result[string, models.ErrorResponse] {
 func VerifyCode(email string, code string) bool {
 	var codeDB models.AuthCodeDB
 	logger.Info("Verifying email: ", email)
-	configs.DB.Where("email = ?", email).First(&codeDB, "created_at >= NOW() - INTERVAL '5 minutes'")
+	configs.DataBase.Where("email = ?", email).First(&codeDB, "created_at >= NOW() - INTERVAL '5 minutes'")
 
 	if codeDB.ID == 0 {
 		logger.Error("Failed to verify email: No valid code found for email provided")
@@ -46,11 +46,18 @@ func VerifyCode(email string, code string) bool {
 		return false
 	}
 
-	res := codeDB.Code == code
+	// codeHash, err := utils.HashPassword(code)
+	// if err != nil {
+	// 	logger.Error("Failed to verify email: Failed to hash code")
+	// 	return false
+	// }
+
+	// logger.Info("Comparing code: ", codeHash, " with code in DB: ", codeDB.Code)
+	res := utils.ComparePassword(codeDB.Code, code)
 
 	if res {
 		logger.Info("Email verified")
-		configs.DB.Delete(&codeDB)
+		configs.DataBase.Delete(&codeDB)
 	} else {
 		logger.Error("Failed to verify email: Code is invalid")
 	}
@@ -60,16 +67,16 @@ func VerifyCode(email string, code string) bool {
 
 func DeleteCode(email string, code string) {
 	var codeDB models.AuthCodeDB
-	configs.DB.Where("email = ?", email).Delete(&codeDB)
+	configs.DataBase.Where("email = ?", email).Delete(&codeDB)
 }
 
 func DeleteExpiredCodes(email string) {
 	var codes []models.AuthCodeDB
 
 	logger.Info("Deleting expired code for email: ", email)
-	configs.DB.Where("email = ?", email).Find(&codes, "created_at < NOW() - INTERVAL '5 minutes'")
+	configs.DataBase.Where("email = ?", email).Find(&codes, "created_at < NOW() - INTERVAL '5 minutes'")
 
 	for _, c := range codes {
-		configs.DB.Delete(c)
+		configs.DataBase.Delete(c)
 	}
 }

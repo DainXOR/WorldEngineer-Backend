@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"dainxor/we/test"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,11 +12,12 @@ func InfoRoutes(router *gin.Engine) {
 		"info ping":          "/api/info/ping",
 		"info api version":   "/api/info/api-version",
 		"info route version": "/api/info/route-version",
-		"info test get":      "/api/info/get",
-		"info test post":     "/api/info/post",
-		"info test put":      "/api/info/put",
-		"info test patch":    "/api/info/patch",
-		"info test delete":   "/api/info/del",
+
+		"info test get":    "/api/test/get",
+		"info test post":   "/api/test/post",
+		"info test put":    "/api/test/put",
+		"info test patch":  "/api/test/patch",
+		"info test delete": "/api/test/del",
 
 		"register email":        "/api/v0/user/register/:email",
 		"user create":           "/api/v0/user/",
@@ -51,11 +51,5 @@ func InfoRoutes(router *gin.Engine) {
 				"version": "v0",
 			})
 		})
-
-		infoRouter.GET("/get", test.Get)
-		infoRouter.POST("/post", test.Post)
-		infoRouter.PUT("/put", test.Put)
-		infoRouter.PATCH("/patch", test.Patch)
-		infoRouter.DELETE("/del", test.Delete)
 	}
 }

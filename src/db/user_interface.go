@@ -1,17 +1,22 @@
 package db
 
 import (
-	"dainxor/we/configs"
+	"dainxor/we/base/configs"
 	"dainxor/we/models"
 	"dainxor/we/types"
 	"dainxor/we/utils"
 
+	"math/rand"
 	"strconv"
 )
 
-func GetUserByID(id string) types.Result[models.UserDB, models.ErrorResponse] {
+type userType struct{}
+
+var User userType
+
+func (userType) GetUserByID(id string) types.Result[models.UserDB, models.ErrorResponse] {
 	var user models.UserDB
-	configs.DB.First(&user, id)
+	configs.DataBase.First(&user, id)
 
 	err := models.ErrorNotFound(
 		"User not found",
@@ -19,9 +24,9 @@ func GetUserByID(id string) types.Result[models.UserDB, models.ErrorResponse] {
 	)
 	return types.ResultOf(user, err, user.ID != 0)
 }
-func GetUserByEmail(email string) types.Result[models.UserDB, models.ErrorResponse] {
+func (userType) GetUserByEmail(email string) types.Result[models.UserDB, models.ErrorResponse] {
 	var user models.UserDB
-	configs.DB.Where("email = ?", email).First(&user)
+	configs.DataBase.Where("email = ?", email).First(&user)
 
 	err := models.ErrorNotFound(
 		"User not found",
@@ -30,9 +35,9 @@ func GetUserByEmail(email string) types.Result[models.UserDB, models.ErrorRespon
 
 	return types.ResultOf(user, err, user.ID != 0)
 }
-func GetUserByNameTag(nameTag string) types.Result[models.UserDB, models.ErrorResponse] {
+func (userType) GetUserByNameTag(nameTag string) types.Result[models.UserDB, models.ErrorResponse] {
 	var user models.UserDB
-	configs.DB.Where("name_tag = ?", nameTag).First(&user)
+	configs.DataBase.Where("name_tag = ?", nameTag).First(&user)
 
 	err := models.ErrorNotFound(
 		"User not found",
@@ -42,9 +47,9 @@ func GetUserByNameTag(nameTag string) types.Result[models.UserDB, models.ErrorRe
 	return types.ResultOf(user, err, user.ID != 0)
 }
 
-func GetAllUsers() types.Result[[]models.UserDB, models.ErrorResponse] {
+func (userType) GetAllUsers() types.Result[[]models.UserDB, models.ErrorResponse] {
 	var users []models.UserDB
-	configs.DB.Find(&users)
+	configs.DataBase.Find(&users)
 
 	err := models.ErrorNotFound(
 		"No users found",
@@ -52,8 +57,8 @@ func GetAllUsers() types.Result[[]models.UserDB, models.ErrorResponse] {
 
 	return types.ResultOf(users, err, len(users) > 0)
 }
-func GetAllFilteredUsers(predicate types.Predicate[models.UserDB]) types.Result[[]models.UserDB, models.ErrorResponse] {
-	result := GetAllUsers()
+func (userType) GetAllFilteredUsers(predicate types.Predicate[models.UserDB]) types.Result[[]models.UserDB, models.ErrorResponse] {
+	result := User.GetAllUsers()
 
 	if result.IsOk() {
 		users := result.Value()
@@ -68,18 +73,18 @@ func GetAllFilteredUsers(predicate types.Predicate[models.UserDB]) types.Result[
 		return result
 	}
 }
-func GetAllUsersByUsername(username string) types.Result[[]models.UserDB, models.ErrorResponse] {
-	return GetAllFilteredUsers(func(u models.UserDB) bool { return u.Username == username })
+func (userType) GetAllUsersByUsername(username string) types.Result[[]models.UserDB, models.ErrorResponse] {
+	return User.GetAllFilteredUsers(func(u models.UserDB) bool { return u.Username == username })
 }
-func GetAllUsersByStatusID(id string) types.Result[[]models.UserDB, models.ErrorResponse] {
-	return GetAllFilteredUsers(func(u models.UserDB) bool {
+func (userType) GetAllUsersByStatusID(id string) types.Result[[]models.UserDB, models.ErrorResponse] {
+	return User.GetAllFilteredUsers(func(u models.UserDB) bool {
 		intID, err := strconv.Atoi(id)
 		return err != nil && u.IDStatus == uint(intID)
 	})
 }
 
-func CreateUser(user models.UserCreate) types.Result[models.UserDB, models.ErrorResponse] {
-	if GetUserByEmail(user.Email).IsOk() {
+func (userType) CreateUser(user models.UserCreate) types.Result[models.UserDB, models.ErrorResponse] {
+	if User.GetUserByEmail(user.Email).IsOk() {
 		return types.ResultErr[models.UserDB](models.Error(
 			types.Http.Conflict(),
 			"conflict",
@@ -88,15 +93,15 @@ func CreateUser(user models.UserCreate) types.Result[models.UserDB, models.Error
 	}
 
 	var newUser models.UserDB
-	newUser.NameTag = utils.UserTagGenerate(user.Username)
+	newUser.NameTag = user.NameTag
 	newUser.Username = user.Username
 	newUser.Email = user.Email
-	newUser.CreatedAt = configs.DB.NowFunc()
-	newUser.UpdatedAt = configs.DB.NowFunc()
+	newUser.CreatedAt = configs.DataBase.NowFunc()
+	newUser.UpdatedAt = configs.DataBase.NowFunc()
 	newUser.IDStatus = 1
-	newUser.StatusTimeStamp = configs.DB.NowFunc()
+	newUser.StatusTimeStamp = configs.DataBase.NowFunc()
 
-	configs.DB.Create(&newUser)
+	configs.DataBase.Create(&newUser)
 
 	err := models.Error(
 		types.Http.InternalServerError(),
@@ -107,14 +112,14 @@ func CreateUser(user models.UserCreate) types.Result[models.UserDB, models.Error
 	return types.ResultOf(newUser, err, newUser.ID != 0)
 }
 
-func UpdateUserByID(id string, user models.UserUpdate) types.Result[models.UserDB, models.ErrorResponse] {
-	result := GetUserByID(id)
+func (userType) UpdateUserByID(id string, user models.UserUpdate) types.Result[models.UserDB, models.ErrorResponse] {
+	result := User.GetUserByID(id)
 
 	if result.IsErr() {
 		return result
 	} else {
 		result := result.Value()
-		configs.DB.Model(&result).Updates(user)
+		configs.DataBase.Model(&result).Updates(user)
 
 		err := models.Error(
 			types.Http.InternalServerError(),
@@ -125,14 +130,14 @@ func UpdateUserByID(id string, user models.UserUpdate) types.Result[models.UserD
 		return types.ResultOf(result, err, result.ID != 0)
 	}
 }
-func UpdateUserByEmail(email string, user models.UserUpdate) types.Result[models.UserDB, models.ErrorResponse] {
-	result := GetUserByEmail(email)
+func (userType) UpdateUserByEmail(email string, user models.UserUpdate) types.Result[models.UserDB, models.ErrorResponse] {
+	result := User.GetUserByEmail(email)
 
 	if result.IsErr() {
 		return result
 	} else {
 		u := result.Value()
-		configs.DB.Model(&u).Updates(user)
+		configs.DataBase.Model(&u).Updates(user)
 
 		err := models.Error(
 			types.Http.InternalServerError(),
@@ -143,14 +148,14 @@ func UpdateUserByEmail(email string, user models.UserUpdate) types.Result[models
 		return types.ResultOf(u, err, u.ID != 0)
 	}
 }
-func UpdateUserByNameTag(nameTag string, user models.UserUpdate) types.Result[models.UserDB, models.ErrorResponse] {
-	result := GetUserByNameTag(nameTag)
+func (userType) UpdateUserByNameTag(nameTag string, user models.UserUpdate) types.Result[models.UserDB, models.ErrorResponse] {
+	result := User.GetUserByNameTag(nameTag)
 
 	if result.IsErr() {
 		return result
 	} else {
 		u := result.Value()
-		configs.DB.Model(&u).Updates(user)
+		configs.DataBase.Model(&u).Updates(user)
 
 		err := models.Error(
 			types.Http.InternalServerError(),
@@ -162,13 +167,13 @@ func UpdateUserByNameTag(nameTag string, user models.UserUpdate) types.Result[mo
 	}
 }
 
-func UpdateAllUsers(user models.UserUpdate) types.Result[[]models.UserDB, models.ErrorResponse] {
-	configs.DB.Model(&models.UserDB{}).Updates(user)
+func (userType) UpdateAllUsers(user models.UserUpdate) types.Result[[]models.UserDB, models.ErrorResponse] {
+	configs.DataBase.Model(&models.UserDB{}).Updates(user)
 
-	return GetAllUsers()
+	return User.GetAllUsers()
 }
-func UpdateAllFilteredUsers(user models.UserUpdate, predicate types.Predicate[models.UserDB]) types.Result[[]models.UserDB, models.ErrorResponse] {
-	result := GetAllFilteredUsers(predicate)
+func (userType) UpdateAllFilteredUsers(user models.UserUpdate, predicate types.Predicate[models.UserDB]) types.Result[[]models.UserDB, models.ErrorResponse] {
+	result := User.GetAllFilteredUsers(predicate)
 
 	if result.IsErr() {
 		return result
@@ -177,7 +182,7 @@ func UpdateAllFilteredUsers(user models.UserUpdate, predicate types.Predicate[mo
 		users := result.Value()
 
 		for _, u := range users {
-			configs.DB.Model(&u).Updates(user)
+			configs.DataBase.Model(&u).Updates(user)
 
 			if u.ID == 0 {
 				errored = append(errored, u)
@@ -194,24 +199,24 @@ func UpdateAllFilteredUsers(user models.UserUpdate, predicate types.Predicate[mo
 		return types.ResultOf(users, err, len(errored) == 0)
 	}
 }
-func UpdateAllUsersByUsername(username string, user models.UserUpdate) types.Result[[]models.UserDB, models.ErrorResponse] {
-	return UpdateAllFilteredUsers(user, func(u models.UserDB) bool { return u.Username == username })
+func (userType) UpdateAllUsersByUsername(username string, user models.UserUpdate) types.Result[[]models.UserDB, models.ErrorResponse] {
+	return User.UpdateAllFilteredUsers(user, func(u models.UserDB) bool { return u.Username == username })
 }
-func UpdateAllUsersByStatusID(id string, user models.UserUpdate) types.Result[[]models.UserDB, models.ErrorResponse] {
-	return UpdateAllFilteredUsers(user, func(u models.UserDB) bool {
+func (userType) UpdateAllUsersByStatusID(id string, user models.UserUpdate) types.Result[[]models.UserDB, models.ErrorResponse] {
+	return User.UpdateAllFilteredUsers(user, func(u models.UserDB) bool {
 		intID, err := strconv.Atoi(id)
 		return err != nil && u.IDStatus == uint(intID)
 	})
 }
 
-func DeleteUserByID(id string) types.Result[models.UserDB, models.ErrorResponse] {
-	result := GetUserByID(id)
+func (userType) DeleteUserByID(id string) types.Result[models.UserDB, models.ErrorResponse] {
+	result := User.GetUserByID(id)
 
 	if result.IsErr() {
 		return result
 	} else {
 		user := result.Value()
-		configs.DB.Delete(&user)
+		configs.DataBase.Delete(&user)
 
 		err := models.Error(
 			types.Http.InternalServerError(),
@@ -222,15 +227,15 @@ func DeleteUserByID(id string) types.Result[models.UserDB, models.ErrorResponse]
 		return types.ResultOf(user, err, user.DeletedAt.Valid)
 	}
 }
-func DeleteUserByEmail(email string) types.Result[models.UserDB, models.ErrorResponse] {
-	result := GetUserByEmail(email)
+func (userType) DeleteUserByEmail(email string) types.Result[models.UserDB, models.ErrorResponse] {
+	result := User.GetUserByEmail(email)
 
 	if result.IsErr() {
 		return result
 	} else {
 		user := result.Value()
 
-		configs.DB.Delete(&user)
+		configs.DataBase.Delete(&user)
 
 		err := models.Error(
 			types.Http.InternalServerError(),
@@ -241,15 +246,15 @@ func DeleteUserByEmail(email string) types.Result[models.UserDB, models.ErrorRes
 		return types.ResultOf(user, err, user.DeletedAt.Valid)
 	}
 }
-func DeleteUserByNameTag(nameTag string) types.Result[models.UserDB, models.ErrorResponse] {
-	result := GetUserByNameTag(nameTag)
+func (userType) DeleteUserByNameTag(nameTag string) types.Result[models.UserDB, models.ErrorResponse] {
+	result := User.GetUserByNameTag(nameTag)
 
 	if result.IsErr() {
 		return result
 	} else {
 		user := result.Value()
 
-		configs.DB.Delete(&user)
+		configs.DataBase.Delete(&user)
 
 		err := models.Error(
 			types.Http.InternalServerError(),
@@ -261,16 +266,16 @@ func DeleteUserByNameTag(nameTag string) types.Result[models.UserDB, models.Erro
 	}
 }
 
-func DeleteAllUsers() types.Result[[]models.UserDB, models.ErrorResponse] {
-	result := GetAllUsers()
+func (userType) DeleteAllUsers() types.Result[[]models.UserDB, models.ErrorResponse] {
+	result := User.GetAllUsers()
 
 	if result.IsErr() {
 		return result
 	}
 
-	configs.DB.Delete(&models.UserDB{})
+	configs.DataBase.Delete(&models.UserDB{})
 
-	if GetAllUsers().IsErr() {
+	if User.GetAllUsers().IsErr() {
 		return types.ResultOk[[]models.UserDB, models.ErrorResponse](result.Value())
 	} else {
 		return types.ResultErr[[]models.UserDB](models.Error(
@@ -280,8 +285,8 @@ func DeleteAllUsers() types.Result[[]models.UserDB, models.ErrorResponse] {
 		))
 	}
 }
-func DeleteAllFilteredUsers(predicate types.Predicate[models.UserDB]) types.Result[[]models.UserDB, models.ErrorResponse] {
-	result := GetAllFilteredUsers(predicate)
+func (userType) DeleteAllFilteredUsers(predicate types.Predicate[models.UserDB]) types.Result[[]models.UserDB, models.ErrorResponse] {
+	result := User.GetAllFilteredUsers(predicate)
 
 	if result.IsErr() {
 		return result
@@ -290,7 +295,7 @@ func DeleteAllFilteredUsers(predicate types.Predicate[models.UserDB]) types.Resu
 	errored := []models.UserDB{}
 
 	for _, u := range result.Value() {
-		configs.DB.Delete(&u)
+		configs.DataBase.Delete(&u)
 
 		if !u.DeletedAt.Valid {
 			errored = append(errored, u)
@@ -306,12 +311,60 @@ func DeleteAllFilteredUsers(predicate types.Predicate[models.UserDB]) types.Resu
 
 	return types.ResultOf(result.Value(), err, len(errored) == 0)
 }
-func DeleteAllUsersByUsername(username string) types.Result[[]models.UserDB, models.ErrorResponse] {
-	return DeleteAllFilteredUsers(func(u models.UserDB) bool { return u.Username == username })
+func (userType) DeleteAllUsersByUsername(username string) types.Result[[]models.UserDB, models.ErrorResponse] {
+	return User.DeleteAllFilteredUsers(func(u models.UserDB) bool { return u.Username == username })
 }
-func DeleteAllUsersByStatusID(id string) types.Result[[]models.UserDB, models.ErrorResponse] {
-	return DeleteAllFilteredUsers(func(u models.UserDB) bool {
+func (userType) DeleteAllUsersByStatusID(id string) types.Result[[]models.UserDB, models.ErrorResponse] {
+	return User.DeleteAllFilteredUsers(func(u models.UserDB) bool {
 		intID, err := strconv.Atoi(id)
 		return err != nil && u.IDStatus == uint(intID)
 	})
+}
+
+func (userType) GenerateUsername() string {
+	username := utils.Usernames()[rand.Intn(utils.UsernamesCount())]
+
+	return username
+}
+func (userType) GenerateNameTag(username string) string {
+	randomNumber := utils.FillZeros(rand.Intn(99999), 5)
+	nameTag := username + "#" + randomNumber
+
+	return nameTag
+}
+func (userType) AvailableUsername(username string) bool {
+	if len(username) < 2 || len(username) > 24 {
+		return false
+	}
+
+	// ^[^'"¨´`#\\]{2,24}$
+	// ^[a-zA-Z0-9_\-+*|$&<>~!¡[\]@?¿^.:,;]{2,24}$
+	// namePattern := regexp.MustCompile("^[^'\"¨´`#\\]{2,24}$")
+	// followsPattern := namePattern.MatchString(nameTag)
+	err := Mail.VerifyEmailAddress(username)
+
+	return err.IsPresent() // && followsPattern
+}
+func (userType) AvailableNameTag(nameTag string) bool {
+	return User.GetUserByNameTag(nameTag).IsErr()
+}
+
+func (userType) CreateNameTag(username string) types.Result[string, models.ErrorResponse] {
+	maxAttemps := 10
+	nameTag := User.GenerateNameTag(username)
+
+	for !User.AvailableNameTag(nameTag) || maxAttemps > 0 {
+		nameTag = User.GenerateNameTag(username)
+		maxAttemps--
+	}
+
+	if maxAttemps == 0 {
+		return types.ResultErr[string](models.Error(
+			types.Http.InternalServerError(),
+			"internal",
+			"Failed to generate name tag",
+		))
+	}
+
+	return types.ResultOk[string, models.ErrorResponse](nameTag)
 }

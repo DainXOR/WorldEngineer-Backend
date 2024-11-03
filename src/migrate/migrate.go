@@ -1,17 +1,30 @@
 package main
 
 import (
-	"dainxor/we/configs"
+	"dainxor/we/base/configs"
+	"dainxor/we/base/logger"
 	"dainxor/we/models"
+
+	"github.com/joho/godotenv"
 )
 
 func init() {
-	configs.ConnectPostgresTest()
+	logger.Init()
+	logger.Info("Loading configurations")
+
+	err := godotenv.Load()
+	if err != nil {
+		logger.Error("Error loading .env file")
+
+	}
+
+	logger.EnvInit()
+	configs.DB.EnvInit()
 }
 
 func main() {
-	configs.DB.AutoMigrate(&models.AuthCodeDB{})
-	configs.DB.AutoMigrate(&models.UserDB{})
-	configs.DB.AutoMigrate(&models.ProjectDB{})
+	configs.DataBase.AutoMigrate(&models.AuthCodeDB{})
+	configs.DataBase.AutoMigrate(&models.UserDB{})
+	configs.DataBase.AutoMigrate(&models.ProjectDB{})
 
 }

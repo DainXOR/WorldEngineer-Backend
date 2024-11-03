@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"dainxor/we/configs"
-	"dainxor/we/logger"
+	"dainxor/we/base/configs"
+	"dainxor/we/base/logger"
 	"dainxor/we/models"
 	"net/http"
 
@@ -24,10 +24,10 @@ func CreateProjectSettings(c *gin.Context) {
 	}
 
 	projectSettings.Public = body.Public
-	projectSettings.CreatedAt = configs.DB.NowFunc()
-	projectSettings.UpdatedAt = configs.DB.NowFunc()
+	projectSettings.CreatedAt = configs.DataBase.NowFunc()
+	projectSettings.UpdatedAt = configs.DataBase.NowFunc()
 
-	configs.DB.Create(&projectSettings)
+	configs.DataBase.Create(&projectSettings)
 
 	c.JSON(http.StatusCreated,
 		models.ProjectSettingsResponse{

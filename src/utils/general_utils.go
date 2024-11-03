@@ -1,9 +1,10 @@
 package utils
 
 import (
-	"dainxor/we/logger"
+	"dainxor/we/base/logger"
 	"strconv"
 	"time"
+	"unsafe"
 )
 
 func Retry[T any](callback func() (T, error), retryAttemps int, failMsg string, finalMsg string) (T, error) {
@@ -54,4 +55,14 @@ func FillZeros(number int, length int) string {
 	}
 
 	return numberStr
+}
+
+// https://dev.to/chigbeef_77/bool-int-but-stupid-in-go-3jb3
+// Go you bro 👌
+func FastBoolConv(b bool) int {
+	return int(*(*byte)(unsafe.Pointer(&b)))
+}
+
+func BoolToFlags(b0 bool, b1 bool) int {
+	return (FastBoolConv(b0) * 2) + FastBoolConv(b1)
 }

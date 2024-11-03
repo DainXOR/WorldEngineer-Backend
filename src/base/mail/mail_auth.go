@@ -1,9 +1,8 @@
 package mail
 
 import (
-	"dainxor/we/auth"
+	"dainxor/we/base/logger"
 	"dainxor/we/db"
-	"dainxor/we/logger"
 	"dainxor/we/models"
 	"dainxor/we/types"
 	"dainxor/we/utils"
@@ -36,16 +35,7 @@ func SendErrorMail(email string) types.Optional[models.ErrorResponse] {
 }
 
 func SendAuthMail(email string) types.Result[models.AuthCodeDB, models.ErrorResponse] {
-	if auth.HasCode(email) {
-		return types.ResultErr[models.AuthCodeDB](models.Error(
-			types.Http.Conflict(),
-			"conflict",
-			"Email is already in use",
-			"Check your email for the verification code, or try again in a few minutes. Also try looking in your spam folder",
-		))
-	}
-
-	resultCode := auth.GenerateCode()
+	resultCode := db.Auth.GenerateCode()
 	if resultCode.IsErr() {
 		return types.ResultErr[models.AuthCodeDB](resultCode.Error())
 	}
@@ -95,7 +85,7 @@ func SendAuthMail(email string) types.Result[models.AuthCodeDB, models.ErrorResp
 		return types.ResultErr[models.AuthCodeDB](err)
 	}
 
-	resultDB := db.Auth.CreateCode(email, code)
+	resultDB := db.Auth.SaveCode(email, code)
 	if resultDB.IsErr() {
 		err2, _ := utils.Retry(func() (types.Optional[models.ErrorResponse], error) { return SendErrorMail(email), nil },
 			3,
@@ -103,9 +93,9 @@ func SendAuthMail(email string) types.Result[models.AuthCodeDB, models.ErrorResp
 			"Could not send error email: ",
 		)
 
-		if db.Auth.GetCodeByEmail(email).IsOk() {
+		if db.Auth.GetValidCodeByEmail(email).IsOk() {
 			logger.Info("Deleting code for email: ", email)
-			db.Auth.DeleteCodeByEmail(email)
+			db.Auth.DeleteAllCodesByEmail(email)
 		} else {
 			logger.Warning("Code not found for email: ", email)
 		}

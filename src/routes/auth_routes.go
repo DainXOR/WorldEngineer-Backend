@@ -11,6 +11,7 @@ func AuthRoutes(router *gin.Engine) {
 	{
 		authRouter.GET("/register/:email", controller.Auth.Register)
 		authRouter.GET("/login/:email", controller.Auth.Login)
-		authRouter.GET("/auth/:email", controller.Auth.Authenticate)
+		authRouter.GET("/verify/:email", controller.Auth.Verify)
+		authRouter.GET("/create-user", controller.Auth.CreateAccount)
 	}
 }

@@ -3,6 +3,8 @@ package logger
 import (
 	"log"
 	"os"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -31,7 +33,6 @@ type dnxLogger struct {
 var dnxLoggerInstance *dnxLogger
 
 func Init() {
-
 	dnxLoggerInstance = &dnxLogger{
 		LogToFile:    true,
 		LogToConsole: true,
@@ -42,6 +43,45 @@ func Init() {
 		WarningLogger: log.New(os.Stdout, "[WARNING] ", log.LstdFlags|log.Lshortfile),
 		ErrorLogger:   log.New(os.Stderr, "[ERROR] ", log.LstdFlags|log.Lshortfile),
 		FatalLogger:   log.New(os.Stderr, "[FATAL] ", log.LstdFlags|log.Lshortfile),
+	}
+
+	EnvInit()
+}
+
+func EnvInit() {
+	minLogLevel, existMinLevel := os.LookupEnv("DNX_LOG_MIN_LEVEL")
+	disableLevels, existDisableLevels := os.LookupEnv("DNX_LOG_DISABLE_LEVELS")
+	logConsole, existLogConsole := os.LookupEnv("DNX_LOG_CONSOLE")
+	logFile, existLogFile := os.LookupEnv("DNX_LOG_FILE")
+
+	if existMinLevel {
+		SetMinLogLevel(LogLevelValue(minLogLevel))
+	}
+	if existDisableLevels {
+		levels := strings.Split(disableLevels, "|")
+		options := 0
+		for _, level := range levels {
+			level = strings.TrimSpace(level)
+			options |= LogLevelValue(level)
+		}
+
+		DisableLogOptions(options)
+	}
+	if existLogConsole {
+		b, err := strconv.ParseBool(logConsole)
+		if err != nil {
+			Warning("Failed to parse DNX_LOG_CONSOLE value")
+		} else {
+			SetLogToConsole(b)
+		}
+	}
+	if existLogFile {
+		b, err := strconv.ParseBool(logFile)
+		if err != nil {
+			Warning("Failed to parse DNX_LOG_FILE value")
+		} else {
+			SetLogToFile(b)
+		}
 	}
 }
 
@@ -81,19 +121,19 @@ func SetLogOptions(options int) {
 
 	msg := "Logging options set to: "
 
-	if options&DEBUG == DEBUG {
+	if LogOptionsHas(DEBUG) {
 		msg += "| DEBUG |"
 	}
-	if options&INFO == INFO {
+	if LogOptionsHas(INFO) {
 		msg += "| INFO |"
 	}
-	if options&WARNING == WARNING {
+	if LogOptionsHas(WARNING) {
 		msg += "| WARNING |"
 	}
-	if options&ERROR == ERROR {
+	if LogOptionsHas(ERROR) {
 		msg += "| ERROR |"
 	}
-	if options&FATAL == FATAL {
+	if LogOptionsHas(FATAL) {
 		msg += "| FATAL |"
 	}
 
@@ -155,21 +195,84 @@ func DisableLogOptions(options int) {
 	Info("Disabled logging options: ", msg)
 	dnxLoggerInstance.LogOptions &= ^options
 }
+func SetMinLogLevel(level int) {
+	if level < NONE || level > ALL {
+		Warning("Invalid logging level")
+		return
+	}
+
+	var msg string
+
+	switch level {
+	case DEBUG:
+		msg += "| DEBUG |"
+		fallthrough
+	case INFO:
+		msg += "| INFO |"
+		fallthrough
+	case WARNING:
+		msg += "| WARNING |"
+		fallthrough
+	case ERROR:
+		msg += "| ERROR |"
+		fallthrough
+	case FATAL:
+		msg += "| FATAL |"
+		fallthrough
+	case ALL:
+		msg = "| ALL |"
+	case NONE:
+		msg = "| NONE |"
+	}
+
+	Info("Minimum logging level set to: ", msg)
+	SetLogOptions(level)
+}
+func LogLevelValue(level string) int {
+	value := LogOptions()
+
+	switch level {
+	case "DEBUG":
+		value = DEBUG
+	case "INFO":
+		value = INFO
+	case "WARNING":
+		value = WARNING
+	case "ERROR":
+		value = ERROR
+	case "FATAL":
+		value = FATAL
+	case "ALL":
+		value = ALL
+	case "NONE":
+		value = NONE
+	default:
+		Warning("Invalid logging level")
+	}
+
+	return value
+}
 
 func canLogWith(logger *log.Logger) bool {
-	if logger == dnxLoggerInstance.DebugLogger && !LogOptionsHas(DEBUG) {
-		return false
-	} else if logger == dnxLoggerInstance.InfoLogger && !LogOptionsHas(INFO) {
-		return false
-	} else if logger == dnxLoggerInstance.WarningLogger && !LogOptionsHas(WARNING) {
-		return false
-	} else if logger == dnxLoggerInstance.ErrorLogger && !LogOptionsHas(ERROR) {
-		return false
-	} else if logger == dnxLoggerInstance.FatalLogger && !LogOptionsHas(FATAL) {
+	if LogOptionsHas(ALL) {
+		return true
+	} else if LogOptionsHas(NONE) {
 		return false
 	}
 
-	return true
+	if logger == dnxLoggerInstance.DebugLogger {
+		return LogOptionsHas(DEBUG)
+	} else if logger == dnxLoggerInstance.InfoLogger {
+		return LogOptionsHas(INFO)
+	} else if logger == dnxLoggerInstance.WarningLogger {
+		return LogOptionsHas(WARNING)
+	} else if logger == dnxLoggerInstance.ErrorLogger {
+		return LogOptionsHas(ERROR)
+	} else if logger == dnxLoggerInstance.FatalLogger {
+		return LogOptionsHas(FATAL)
+	}
+
+	return false
 }
 
 func writeToFile(prefix string, v ...interface{}) {
