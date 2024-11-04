@@ -13,13 +13,29 @@ type utilType struct{}
 
 var Util utilType
 
+func (utilType) CreateUsername(c *gin.Context) {
+	result := db.User.GenerateUsername()
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK,
+		gin.H{
+			"username": result.Value(),
+		},
+	)
+}
+
 func (utilType) CreateNameTag(c *gin.Context) {
 	username := c.Param("username")
 	result := db.User.CreateNameTag(username)
 
 	if result.IsErr() {
 		err := result.Error()
-		c.JSON(err.Code.Get(), err)
+		c.JSON(err.Code.AsInt(), err)
 		return
 	}
 
@@ -30,7 +46,22 @@ func (utilType) CreateNameTag(c *gin.Context) {
 	)
 }
 
-func (utilType) AvailableNameTag(c *gin.Context) {
+func (utilType) CheckUsername(c *gin.Context) {
+	username := c.Param("username")
+
+	if !db.User.ValidUsername(username) {
+		c.JSON(http.StatusBadRequest,
+			models.Error(
+				types.Http.Conflict(),
+				"conflict",
+				"Username is not valid",
+			),
+		)
+		return
+	}
+}
+
+func (utilType) CheckNameTag(c *gin.Context) {
 	nameTag := c.Param("nameTag")
 
 	if !db.User.AvailableNameTag(nameTag) {
@@ -43,6 +74,8 @@ func (utilType) AvailableNameTag(c *gin.Context) {
 		)
 		return
 	}
+
+	// TODO: Check if name tag is valid
 
 	c.JSON(http.StatusOK, gin.H{})
 }

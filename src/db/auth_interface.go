@@ -220,32 +220,46 @@ func (authType) DeleteExpiredCodesByEmail(email string) types.Result[[]models.Au
 
 	return types.ResultOk[[]models.AuthCodeDB, models.ErrorResponse](codesDB)
 }
-func (authType) DeleteConsumedCodesByEmail(email string) types.Result[[]models.AuthCodeDB, models.ErrorResponse] {
-	var codesDB []models.AuthCodeDB
-	configs.DB.Get().Where("email = ? AND consumed_at IS NOT NULL", email).Delete(&codesDB)
+func (authType) DeleteConsumedCodesByEmail(email string) types.Optional[models.ErrorResponse] {
 
-	if len(codesDB) == 0 {
-		return types.ResultErr[[]models.AuthCodeDB](models.Error(
-			types.Http.NotFound(),
-			"not_found",
-			"Code registry not found",
-		))
+	configs.DB.
+		Get().
+		Where("email = ? AND consumed_at IS NOT NULL", email).
+		Delete(&[]models.AuthCodeDB{})
+
+	result := Auth.GetConsumedCodeByEmail(email)
+
+	if result.IsOk() {
+		return types.OptionalOf(
+			models.Error(
+				types.Http.InternalServerError(),
+				"internal",
+				"Failed to delete consumed codes",
+			),
+		)
 	}
 
-	return types.ResultOk[[]models.AuthCodeDB, models.ErrorResponse](codesDB)
+	return types.OptionalEmpty[models.ErrorResponse]()
 }
 
 func (authType) ConsumeCodeById(id uint, code string) types.Result[models.AuthCodeDB, models.ErrorResponse] {
 	codeDB := Auth.GetCodeById(id)
 
 	if codeDB.IsErr() {
-		logger.Error("Failed to consume code: ", codeDB.Error().Message)
+		logger.Warning("Failed to consume code: ", codeDB.Error().Message)
 		return codeDB
 	}
 
 	codeValue := codeDB.Value()
+	consumed := !codeValue.ConsumedAt.IsZero()
+	expired := codeValue.CreatedAt.Before(configs.DB.Get().NowFunc().Add(-5 * time.Minute))
 
-	if codeValue.ConsumedAt.IsZero() || codeValue.CreatedAt.Before(configs.DB.Get().NowFunc().Add(-5*time.Minute)) {
+	logger.Debug("Code: ", codeValue.Code)
+	logger.Debug("Consumed: ", consumed)
+	logger.Debug("Expired: ", expired)
+
+	if consumed || expired {
+		logger.Warning("Failed to consume code: Code is invalid")
 		return types.ResultErr[models.AuthCodeDB](models.Error(
 			types.Http.BadRequest(),
 			"bad_request",
@@ -254,9 +268,12 @@ func (authType) ConsumeCodeById(id uint, code string) types.Result[models.AuthCo
 		))
 	}
 
-	match := utils.ComparePassword(codeDB.Value().Code, code)
+	logger.Debug("Code: ", codeValue.Code)
+	logger.Debug("Provided: ", code)
+	match := utils.ComparePassword(codeValue.Code, code)
 
 	if !match {
+		logger.Warning("Failed to consume code: No match")
 		return types.ResultErr[models.AuthCodeDB](models.Error(
 			types.Http.BadRequest(),
 			"bad_request",
@@ -265,7 +282,7 @@ func (authType) ConsumeCodeById(id uint, code string) types.Result[models.AuthCo
 		))
 	}
 
-	Auth.MarkUsedCodeById(codeDB.Value().ID)
+	Auth.MarkUsedCodeById(codeValue.ID)
 
 	return codeDB
 }
@@ -274,12 +291,16 @@ func (authType) ConsumeCodeByEmail(email string, code string) types.Result[model
 	codeDB := Auth.GetValidCodeByEmail(email)
 
 	if codeDB.IsErr() {
+		logger.Warning("Failed to consume code: ", codeDB.Error().Message)
 		return codeDB
 	}
 
-	valid := utils.ComparePassword(codeDB.Value().Code, code)
+	logger.Debug("Code: ", codeDB.Value().Code)
+	logger.Debug("Provided: ", code)
+	match := utils.ComparePassword(codeDB.Value().Code, code)
 
-	if !valid {
+	if !match {
+		logger.Warning("Failed to consume code: No match")
 		return types.ResultErr[models.AuthCodeDB](models.Error(
 			types.Http.BadRequest(),
 			"bad_request",

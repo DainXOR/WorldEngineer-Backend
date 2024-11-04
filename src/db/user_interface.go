@@ -5,6 +5,7 @@ import (
 	"dainxor/we/models"
 	"dainxor/we/types"
 	"dainxor/we/utils"
+	"regexp"
 
 	"math/rand"
 	"strconv"
@@ -321,10 +322,18 @@ func (userType) DeleteAllUsersByStatusID(id string) types.Result[[]models.UserDB
 	})
 }
 
-func (userType) GenerateUsername() string {
-	username := utils.Usernames()[rand.Intn(utils.UsernamesCount())]
+func (userType) GenerateUsername() types.Result[string, models.ErrorResponse] {
+	firstName := 0
+	lastName := 0
 
-	return username
+	for firstName == lastName {
+		firstName = rand.Intn(utils.UsernamesCount())
+		lastName = rand.Intn(utils.UsernamesCount())
+	}
+
+	username := utils.Usernames()[firstName] + utils.Usernames()[lastName]
+
+	return types.ResultOk[string, models.ErrorResponse](username)
 }
 func (userType) GenerateNameTag(username string) string {
 	randomNumber := utils.FillZeros(rand.Intn(99999), 5)
@@ -332,21 +341,34 @@ func (userType) GenerateNameTag(username string) string {
 
 	return nameTag
 }
-func (userType) AvailableUsername(username string) bool {
-	if len(username) < 2 || len(username) > 24 {
+func (userType) ValidUsername(username string) bool {
+	if len(username) < 2 || len(username) > 23 {
 		return false
 	}
 
-	// ^[^'"¨´`#\\]{2,24}$
-	// ^[a-zA-Z0-9_\-+*|$&<>~!¡[\]@?¿^.:,;]{2,24}$
-	// namePattern := regexp.MustCompile("^[^'\"¨´`#\\]{2,24}$")
-	// followsPattern := namePattern.MatchString(nameTag)
+	pattern := `^[a-zA-Z0-9_\-+*|$&<>~!¡[\]@?¿^.:,;]{3,30}$`
+	namePattern := regexp.MustCompile(pattern)
+
+	followsPattern := namePattern.MatchString(username)
 	err := Mail.VerifyEmailAddress(username)
 
-	return err.IsPresent() // && followsPattern
+	return err.IsPresent() && followsPattern
 }
 func (userType) AvailableNameTag(nameTag string) bool {
 	return User.GetUserByNameTag(nameTag).IsErr()
+}
+func (userType) ValidNameTag(nameTag string) bool {
+	if len(nameTag) < 3 || len(nameTag) > 30 {
+		return false
+	}
+
+	pattern := `^[a-zA-Z0-9_\-+*|$&<>~!¡[\]@?¿^.:,;]{3,30}$|^[a-zA-Z0-9_\-+*|$&<>~!¡[\]@?¿^.:,;]{3,24}#[0-9]{6}$`
+	namePattern := regexp.MustCompile(pattern)
+
+	followsPattern := namePattern.MatchString(nameTag)
+	err := Mail.VerifyEmailAddress(nameTag)
+
+	return err.IsPresent() && followsPattern
 }
 
 func (userType) CreateNameTag(username string) types.Result[string, models.ErrorResponse] {

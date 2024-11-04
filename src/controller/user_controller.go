@@ -38,7 +38,7 @@ func (userType) Create(c *gin.Context) {
 
 	if result.IsErr() {
 		err := result.Error()
-		c.JSON(err.Code.Get(), err)
+		c.JSON(err.Code.AsInt(), err)
 		return
 	}
 
@@ -51,7 +51,7 @@ func (userType) GetAll(c *gin.Context) {
 
 	if result.IsErr() {
 		err := result.Error()
-		c.JSON(err.Code.Get(), err)
+		c.JSON(err.Code.AsInt(), err)
 		return
 	}
 
@@ -65,7 +65,7 @@ func (userType) GetByID(c *gin.Context) {
 
 	if result.IsErr() {
 		err := result.Error()
-		c.JSON(err.Code.Get(), err)
+		c.JSON(err.Code.AsInt(), err)
 		return
 	}
 
@@ -77,7 +77,7 @@ func (userType) GetAllByStatusID(c *gin.Context) {
 
 	if result.IsErr() {
 		err := result.Error()
-		c.JSON(err.Code.Get(), err)
+		c.JSON(err.Code.AsInt(), err)
 		return
 	}
 
@@ -109,7 +109,7 @@ func (userType) UpdateByID(c *gin.Context) {
 
 	if response.IsErr() {
 		err := response.Error()
-		c.JSON(err.Code.Get(), err)
+		c.JSON(err.Code.AsInt(), err)
 		return
 	}
 

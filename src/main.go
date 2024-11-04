@@ -6,6 +6,7 @@ import (
 	"dainxor/we/db"
 	"dainxor/we/middleware"
 	"dainxor/we/routes"
+
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -34,9 +35,6 @@ func Init() {
 
 func main() {
 	Init()
-
-	db.Auth.ConsumeCodeById(1, "123456")
-	panic("test")
 
 	router := gin.Default()
 	router.Use(middleware.CORSMiddleware())

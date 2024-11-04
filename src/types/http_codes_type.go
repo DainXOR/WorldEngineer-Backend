@@ -7,7 +7,7 @@ type httpCode struct{}
 
 var Http httpCode
 
-func (c HttpCode) Get() int {
+func (c HttpCode) AsInt() int {
 	return int(c)
 }
 

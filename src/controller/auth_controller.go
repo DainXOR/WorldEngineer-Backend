@@ -35,7 +35,7 @@ func (authType) Register(c *gin.Context) {
 	}
 
 	if db.Auth.GetValidCodeByEmail(email).IsOk() {
-		c.JSON(types.Http.Conflict().Get(),
+		c.JSON(types.Http.Conflict().AsInt(),
 			models.Error(
 				types.Http.Conflict(),
 				"conflict",
@@ -48,13 +48,13 @@ func (authType) Register(c *gin.Context) {
 
 	if err := db.Mail.VerifyEmailAddress(email); err.IsPresent() {
 		err := err.Get()
-		c.JSON(err.Code.Get(), err)
+		c.JSON(err.Code.AsInt(), err)
 		return
 	}
 
 	if result := db.Mail.SendAuthMail(email); result.IsErr() {
 		result := result.Error()
-		c.JSON(result.Code.Get(), result)
+		c.JSON(result.Code.AsInt(), result)
 	} else {
 		c.JSON(http.StatusNoContent, gin.H{})
 	}
@@ -78,7 +78,7 @@ func (authType) Login(c *gin.Context) {
 
 	if result := db.Mail.SendAuthMail(email); result.IsErr() {
 		result := result.Error()
-		c.JSON(result.Code.Get(), result)
+		c.JSON(result.Code.AsInt(), result)
 	} else {
 		c.JSON(http.StatusNoContent, gin.H{})
 	}
@@ -138,7 +138,7 @@ func (authType) CreateAccount(c *gin.Context) {
 		c.JSON(http.StatusBadRequest,
 			models.Error(
 				types.Http.BadRequest(),
-				"conflict",
+				"bad_request",
 				"Email is already in use",
 				"Expected body: {username: string, email: string}",
 			),
@@ -175,7 +175,19 @@ func (authType) CreateAccount(c *gin.Context) {
 		return
 	}
 
-	usernameUsable := db.User.AvailableUsername(username)
+	if db.Auth.DeleteConsumedCodesByEmail(email).IsPresent() {
+		c.JSON(http.StatusInternalServerError,
+			models.Error(
+				types.Http.InternalServerError(),
+				"internal",
+				"failed to delete consumed codes",
+				"Another registration might be in progress and used the same email",
+			),
+		)
+		return
+	}
+
+	usernameUsable := db.User.ValidUsername(username)
 	nametagUsable := db.User.AvailableNameTag(nametag)
 
 	if !usernameUsable || !nametagUsable {
@@ -183,7 +195,7 @@ func (authType) CreateAccount(c *gin.Context) {
 			models.Error(
 				types.Http.BadRequest(),
 				"bad_request",
-				"Username or nametag is already in use",
+				"Username or nametag are invalid",
 				strconv.Itoa(utils.BoolToFlags(usernameUsable, nametagUsable)),
 			),
 		)
@@ -197,8 +209,7 @@ func (authType) CreateAccount(c *gin.Context) {
 	}
 
 	if result := db.User.CreateUser(newUser); result.IsErr() {
-		result := result.Error()
-		c.JSON(result.Code.Get(), result)
+		c.JSON(result.Error().Code.AsInt(), result.Error())
 	} else {
 		c.JSON(http.StatusNoContent, result.Value())
 	}
