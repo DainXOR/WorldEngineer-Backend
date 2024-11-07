@@ -2,12 +2,13 @@ package db
 
 import (
 	"dainxor/we/base/configs"
+	"dainxor/we/base/logger"
 	"dainxor/we/models"
 	"dainxor/we/types"
 	"dainxor/we/utils"
-	"regexp"
 
 	"math/rand"
+	"regexp"
 	"strconv"
 )
 
@@ -336,23 +337,26 @@ func (userType) GenerateUsername() types.Result[string, models.ErrorResponse] {
 	return types.ResultOk[string, models.ErrorResponse](username)
 }
 func (userType) GenerateNameTag(username string) string {
-	randomNumber := utils.FillZeros(rand.Intn(99999), 5)
+	randomNumber := utils.FillZeros(rand.Intn(999999), 5)
 	nameTag := username + "#" + randomNumber
 
 	return nameTag
 }
 func (userType) ValidUsername(username string) bool {
 	if len(username) < 2 || len(username) > 23 {
+		logger.Debug("Username length is invalid")
 		return false
 	}
 
-	pattern := `^[a-zA-Z0-9_\-+*|$&<>~!¡[\]@?¿^.:,;]{3,30}$`
+	pattern := `^[a-zA-Z0-9_\-+*=%$&|^~!¡¿?@.:;,<>[\](){}]{3,30}$`
 	namePattern := regexp.MustCompile(pattern)
 
 	followsPattern := namePattern.MatchString(username)
-	err := Mail.VerifyEmailAddress(username)
+	notEmail := Mail.VerifyEmailAddress(username).IsPresent()
 
-	return err.IsPresent() && followsPattern
+	logger.Debug("Username follows pattern: ", followsPattern)
+	logger.Debug("Username is not an email: ", notEmail)
+	return notEmail && followsPattern
 }
 func (userType) AvailableNameTag(nameTag string) bool {
 	return User.GetUserByNameTag(nameTag).IsErr()
@@ -362,20 +366,21 @@ func (userType) ValidNameTag(nameTag string) bool {
 		return false
 	}
 
-	pattern := `^[a-zA-Z0-9_\-+*|$&<>~!¡[\]@?¿^.:,;]{3,30}$|^[a-zA-Z0-9_\-+*|$&<>~!¡[\]@?¿^.:,;]{3,24}#[0-9]{6}$`
+	pattern := `(^[a-zA-Z0-9_\-+*=%$&|^~!¡¿?@.:;,<>[\](){}]{3,30}$)|(^[a-zA-Z0-9_\-+*=%$&|^~!¡¿?@.:;,<>[\](){}]{3,24}#[0-9]{6}$)`
 	namePattern := regexp.MustCompile(pattern)
 
 	followsPattern := namePattern.MatchString(nameTag)
-	err := Mail.VerifyEmailAddress(nameTag)
+	notEmail := Mail.VerifyEmailAddress(nameTag).IsPresent()
+	isAvailable := User.AvailableNameTag(nameTag)
 
-	return err.IsPresent() && followsPattern
+	return isAvailable && notEmail && followsPattern
 }
 
 func (userType) CreateNameTag(username string) types.Result[string, models.ErrorResponse] {
 	maxAttemps := 10
 	nameTag := User.GenerateNameTag(username)
 
-	for !User.AvailableNameTag(nameTag) || maxAttemps > 0 {
+	for !User.AvailableNameTag(nameTag) || maxAttemps <= 0 {
 		nameTag = User.GenerateNameTag(username)
 		maxAttemps--
 	}

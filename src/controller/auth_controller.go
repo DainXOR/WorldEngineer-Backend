@@ -52,12 +52,30 @@ func (authType) Register(c *gin.Context) {
 		return
 	}
 
-	if result := db.Mail.SendAuthMail(email); result.IsErr() {
-		result := result.Error()
-		c.JSON(result.Code.AsInt(), result)
-	} else {
-		c.JSON(http.StatusNoContent, gin.H{})
+	result := db.Mail.SendAuthMail(email)
+
+	if result.IsErr() {
+		logger.Warning("Failed to send email: ", result.Error().Message)
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
 	}
+
+	resultDB := db.Auth.SaveCode(email, result.Value())
+
+	if resultDB.IsErr() {
+		logger.Warning("Failed to save code: ", resultDB.Error().Message)
+
+		if db.Auth.GetValidCodeByEmail(email).IsOk() {
+			logger.Info("Deleting code for email: ", email)
+			db.Auth.DeleteAllCodesByEmail(email)
+		} else {
+			logger.Warning("Code not found for email: ", email)
+		}
+
+		c.JSON(resultDB.Error().Code.AsInt(), resultDB.Error())
+	}
+
+	c.JSON(http.StatusNoContent, gin.H{})
 }
 
 func (authType) Login(c *gin.Context) {
@@ -76,12 +94,30 @@ func (authType) Login(c *gin.Context) {
 		return
 	}
 
-	if result := db.Mail.SendAuthMail(email); result.IsErr() {
-		result := result.Error()
-		c.JSON(result.Code.AsInt(), result)
-	} else {
-		c.JSON(http.StatusNoContent, gin.H{})
+	result := db.Mail.SendAuthMail(email)
+
+	if result.IsErr() {
+		logger.Warning("Failed to send email: ", result.Error().Message)
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
 	}
+
+	resultDB := db.Auth.SaveCode(email, result.Value())
+
+	if resultDB.IsErr() {
+		logger.Warning("Failed to save code: ", resultDB.Error().Message)
+
+		if db.Auth.GetValidCodeByEmail(email).IsOk() {
+			logger.Info("Deleting code for email: ", email)
+			db.Auth.DeleteAllCodesByEmail(email)
+		} else {
+			logger.Warning("Code not found for email: ", email)
+		}
+
+		c.JSON(resultDB.Error().Code.AsInt(), resultDB.Error())
+	}
+
+	c.JSON(http.StatusNoContent, gin.H{})
 }
 
 func (authType) Verify(c *gin.Context) {
@@ -123,7 +159,16 @@ func (authType) Verify(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusNoContent, gin.H{})
+	res := db.User.GetUserByEmail(email)
+	logger.Debug("Email: ", email)
+	logger.Debug("Result: ", res)
+
+	if res.IsErr() {
+		c.JSON(http.StatusNoContent, gin.H{})
+	} else {
+		c.JSON(http.StatusOK, res.Value().ToResponse())
+	}
+
 }
 
 func (authType) CreateAccount(c *gin.Context) {

@@ -58,13 +58,14 @@ func (authType) SaveCode(email string, code string) types.Result[models.AuthCode
 		))
 	}
 
-	registry := models.AuthCodeDB{
-		Email:     email,
-		Code:      sha256Code,
-		CreatedAt: configs.DB.Get().NowFunc(),
-	}
+	registry := models.AuthCode(sha256Code, email)
+
+	logger.Debug("Code: ", registry)
 
 	configs.DB.Get().Create(&registry)
+
+	logger.Debug("Code ID: ", registry.ID)
+	logger.Debug("Created code: ", registry)
 
 	if registry.ID == 0 {
 		return types.ResultErr[models.AuthCodeDB](models.Error(
@@ -97,10 +98,11 @@ func (authType) GetValidCodeByEmail(email string) types.Result[models.AuthCodeDB
 	configs.DB.Get().Where("email = ?", email).First(&codeDB, "created_at >= NOW() - INTERVAL '5 minutes' AND consumed_at IS NULL")
 
 	if codeDB.ID == 0 {
-		return types.ResultErr[models.AuthCodeDB](models.ErrorResponse{
-			Type:    "bad_request",
-			Message: "Email has no valid codes",
-		})
+		return types.ResultErr[models.AuthCodeDB](models.Error(
+			types.Http.BadRequest(),
+			"bad_request",
+			"Email has no valid codes",
+		))
 	}
 
 	return types.ResultOk[models.AuthCodeDB, models.ErrorResponse](codeDB)
@@ -251,7 +253,7 @@ func (authType) ConsumeCodeById(id uint, code string) types.Result[models.AuthCo
 	}
 
 	codeValue := codeDB.Value()
-	consumed := !codeValue.ConsumedAt.IsZero()
+	consumed := !codeValue.ConsumedAt.Time.IsZero()
 	expired := codeValue.CreatedAt.Before(configs.DB.Get().NowFunc().Add(-5 * time.Minute))
 
 	logger.Debug("Code: ", codeValue.Code)

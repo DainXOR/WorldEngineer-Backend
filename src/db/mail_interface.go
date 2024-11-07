@@ -42,10 +42,10 @@ func (mailType) SendErrorMail(email string) types.Optional[models.ErrorResponse]
 	return types.OptionalEmpty[models.ErrorResponse]()
 }
 
-func (mailType) SendAuthMail(email string) types.Result[models.AuthCodeDB, models.ErrorResponse] {
+func (mailType) SendAuthMail(email string) types.Result[string, models.ErrorResponse] {
 	resultCode := Auth.GenerateCode()
 	if resultCode.IsErr() {
-		return types.ResultErr[models.AuthCodeDB](resultCode.Error())
+		return types.ResultErr[string](resultCode.Error())
 	}
 
 	code := resultCode.Value()
@@ -87,42 +87,13 @@ func (mailType) SendAuthMail(email string) types.Result[models.AuthCodeDB, model
 			err.Message += " | " + err2.Message
 			err.Detail += " | " + err2.Detail
 
-			return types.ResultErr[models.AuthCodeDB](err)
+			return types.ResultErr[string](err)
 		}
 
-		return types.ResultErr[models.AuthCodeDB](err)
+		return types.ResultErr[string](err)
 	}
 
-	resultDB := Auth.SaveCode(email, code)
-	if resultDB.IsErr() {
-		err2, _ := utils.Retry(func() (types.Optional[models.ErrorResponse], error) { return Mail.SendErrorMail(email), nil },
-			3,
-			"Failed to send error email: ",
-			"Could not send error email: ",
-		)
-
-		if Auth.GetValidCodeByEmail(email).IsOk() {
-			logger.Info("Deleting code for email: ", email)
-			Auth.DeleteAllCodesByEmail(email)
-		} else {
-			logger.Warning("Code not found for email: ", email)
-		}
-
-		err := resultDB.Error()
-		if err2.IsPresent() {
-			err2 := err2.Get()
-			err.Code = types.Http.InternalServerError()
-			err.Type += " | " + err2.Type
-			err.Message += " | " + err2.Message
-			err.Detail += " | " + err2.Detail
-
-			return types.ResultErr[models.AuthCodeDB](err)
-		}
-
-		return types.ResultErr[models.AuthCodeDB](err)
-	}
-
-	return resultDB
+	return types.ResultOk[string, models.ErrorResponse](code)
 }
 
 var (

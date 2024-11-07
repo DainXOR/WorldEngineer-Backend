@@ -34,6 +34,11 @@ func (userType) Create(c *gin.Context) {
 		return
 	}
 
+	logger.Debug("Creating user: ", body)
+	logger.Debug("Username: ", body.Username)
+	logger.Debug("NameTag: ", body.NameTag)
+	logger.Debug("Email: ", body.Email)
+
 	result := db.User.CreateUser(body)
 
 	if result.IsErr() {

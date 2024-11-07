@@ -18,8 +18,12 @@ func UtilRoutes(router *gin.Engine) {
 		nameTagRouter := utilRouter.Group("/name-tag")
 		{
 			nameTagRouter.GET("/create/:username", controller.Util.CreateNameTag)
-			nameTagRouter.GET("/check", controller.Util.CheckNameTag)
+			nameTagRouter.GET("/check/:nametag", controller.Util.CheckNameTag)
 		}
 
+		profileRouter := utilRouter.Group("/profile")
+		{
+			profileRouter.GET("/picture/:id", controller.Util.GetProfilePicture)
+		}
 	}
 }
