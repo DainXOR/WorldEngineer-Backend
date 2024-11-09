@@ -31,3 +31,7 @@ func Error(code types.HttpCode, type_ string, information ...string) ErrorRespon
 func ErrorNotFound(information ...string) ErrorResponse {
 	return Error(types.Http.NotFound(), "not_found", information...)
 }
+
+func ErrorInternal(information ...string) ErrorResponse {
+	return Error(types.Http.InternalServerError(), "internal", information...)
+}

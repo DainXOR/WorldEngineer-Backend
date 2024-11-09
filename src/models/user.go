@@ -7,13 +7,15 @@ import (
 )
 
 type UserDB struct {
-	gorm.Model
 	ID              uint      `json:"id" gorm:"primarykey"`
 	NameTag         string    `json:"name_tag" gorm:"not null"`
 	Username        string    `json:"username" gorm:"not null"`
 	Email           string    `json:"email" gorm:"not null"`
 	IDStatus        uint      `json:"id_status" gorm:"foreignKey:ID"`
 	StatusTimeStamp time.Time `json:"status_time_stamp" gorm:"not null"`
+	CreatedAt       time.Time `json:"created_at" gorm:"not null"`
+	UpdatedAt       time.Time `json:"updated_at" gorm:"not null"`
+	gorm.Model
 }
 
 type UserResponse struct {
@@ -37,9 +39,21 @@ func (user UserDB) ToResponse() UserResponse {
 }
 
 type UserCreate struct {
+	NameTag  string `json:"name_tag"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
-	NameTag  string `json:"name_tag"`
+}
+
+func (u UserCreate) ToDB() UserDB {
+	return UserDB{
+		Username:        u.Username,
+		Email:           u.Email,
+		NameTag:         u.NameTag,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		IDStatus:        1,
+		StatusTimeStamp: time.Now(),
+	}
 }
 
 type UserUpdate struct {
@@ -48,6 +62,16 @@ type UserUpdate struct {
 	IDStatus uint   `json:"id_status"`
 }
 
-func (u *UserDB) TableName() string {
+func (u UserUpdate) ToDB() UserDB {
+	return UserDB{
+		Username:        u.Username,
+		Email:           u.Email,
+		IDStatus:        u.IDStatus,
+		UpdatedAt:       time.Now(),
+		StatusTimeStamp: time.Now(),
+	}
+}
+
+func (UserDB) TableName() string {
 	return "users"
 }

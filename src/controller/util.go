@@ -100,5 +100,10 @@ func (utilType) GetProfilePicture(c *gin.Context) {
 	//		"picture": result.Value(),
 	//	},
 	//)
-	c.JSON(http.StatusOK, gin.H{"picture": "https://i.pinimg.com/474x/8a/87/72/8a8772480da9d8ae8de32eb20fecb725.jpg"})
+	if id == "9" {
+		c.JSON(http.StatusOK, gin.H{"picture": "https://i.pinimg.com/474x/8a/87/72/8a8772480da9d8ae8de32eb20fecb725.jpg"})
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{})
+	}
+
 }

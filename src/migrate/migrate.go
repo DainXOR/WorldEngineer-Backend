@@ -26,5 +26,7 @@ func main() {
 	configs.DataBase.AutoMigrate(&models.AuthCodeDB{})
 	configs.DataBase.AutoMigrate(&models.UserDB{})
 	configs.DataBase.AutoMigrate(&models.ProjectDB{})
+	configs.DataBase.AutoMigrate(&models.ProjectSettingsDB{})
+	configs.DataBase.AutoMigrate(&models.ProjectPermissionDB{})
 
 }

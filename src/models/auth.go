@@ -25,6 +25,6 @@ type AuthCodeUpdate struct {
 	ConsumedAt time.Time `json:"consumed_at"`
 }
 
-func (u *AuthCodeDB) TableName() string {
+func (AuthCodeDB) TableName() string {
 	return "auth_codes"
 }

@@ -46,9 +46,9 @@ func (r *Result[T, E]) ErrorOr(err E) E {
 	return err
 }
 
-func (r *Result[T, E]) Get() (T, E) {
+func (r *Result[T, E]) GetRaw() (T, E) {
 	return r.Value(), r.Error()
 }
-func (r *Result[T, E]) GetRaw() (Optional[T], Optional[E]) {
+func (r *Result[T, E]) Get() (Optional[T], Optional[E]) {
 	return r.value, r.err
 }
