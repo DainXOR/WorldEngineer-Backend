@@ -28,5 +28,5 @@ func main() {
 	configs.DataBase.AutoMigrate(&models.ProjectDB{})
 	configs.DataBase.AutoMigrate(&models.ProjectSettingsDB{})
 	configs.DataBase.AutoMigrate(&models.ProjectPermissionDB{})
-
+	configs.DataBase.AutoMigrate(&models.ResourceTextDB{})
 }

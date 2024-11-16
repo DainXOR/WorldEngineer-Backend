@@ -36,10 +36,11 @@ func ProjectRoutes(router *gin.Engine) {
 			collaboratorRouter.POST("/", controller.Project.Collaborator.Create)
 
 			collaboratorRouter.GET("/id/:id", controller.Project.Collaborator.GetByID)
-			collaboratorRouter.GET("/id-user/:idUser/id-project/:idProject", controller.Project.Collaborator.GetByUserIDAndProjectID)
+			collaboratorRouter.GET("/id-user/id-project/:idUser/:idProject", controller.Project.Collaborator.GetByUserIDAndProjectID)
 			collaboratorRouter.GET("/all/", controller.Project.Collaborator.GetAll)
 			collaboratorRouter.GET("/id-project/:id", controller.Project.Collaborator.GetByProjectID)
-			collaboratorRouter.GET("/id-user/:id", controller.Project.Collaborator.GetByUserID)
+			collaboratorRouter.GET("/id-user/:idUser", controller.Project.Collaborator.GetByUserID)
+			collaboratorRouter.GET("/id-project/id-permission/:idProject/:idPermission", controller.Project.Collaborator.GetByProjectIDAndPermissionID)
 
 			collaboratorRouter.DELETE("/id/:id", controller.Project.Collaborator.DeleteByID)
 		}
@@ -50,9 +51,15 @@ func ProjectRoutes(router *gin.Engine) {
 
 			permissionRouter.GET("/id/:id", controller.Project.Permission.GetByID)
 			permissionRouter.GET("/id-collaborator/:id", controller.Project.Permission.GetByCollaboratorID)
-			permissionRouter.GET("/id-project/:idProject/id-permission/:idPermission", controller.Project.Permission.GetByProjectIDAndPermissionID)
 
 			permissionRouter.DELETE("/id/:id", controller.Project.Permission.DeleteByID)
+		}
+
+		resourcesRouter := projectRouter.Group("/resources")
+		{
+			resourcesRouter.POST("/", controller.Project.Resources.CreateText)
+
+			resourcesRouter.GET("/id/:id", controller.Project.Resources.GetTextByID)
 		}
 	}
 }

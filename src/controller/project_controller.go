@@ -16,11 +16,13 @@ import (
 type settingsType struct{}
 type collaboratorType struct{}
 type permissionType struct{}
+type resourcesType struct{}
 
 type projectType struct {
 	Settings     settingsType
 	Collaborator collaboratorType
 	Permission   permissionType
+	Resources    resourcesType
 }
 
 var Project projectType
@@ -343,6 +345,23 @@ func (collaboratorType) GetByUserIDAndProjectID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result.Value().ToResponse())
 }
+func (collaboratorType) GetByProjectIDAndPermissionID(c *gin.Context) {
+	idProject := c.Param("idProject")
+	idPermission := c.Param("idPermission")
+	result := db.Project.Collaborator.GetByProjectIDAndPermissionID(idPermission, idProject)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	collaborators := result.Value()
+
+	response := utils.Map(collaborators, models.ProjectCollaboratorDB.ToResponse)
+
+	c.JSON(http.StatusOK, response)
+}
 
 func (collaboratorType) GetAll(c *gin.Context) {
 	result := db.Project.Collaborator.GetAll()
@@ -374,7 +393,7 @@ func (collaboratorType) GetByProjectID(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 func (collaboratorType) GetByUserID(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("idUser")
 	result := db.Project.Collaborator.GetByUserID(id)
 
 	if result.IsErr() {
@@ -463,25 +482,6 @@ func (permissionType) GetByCollaboratorID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
-func (permissionType) GetByProjectIDAndPermissionID(c *gin.Context) {
-	idProject := c.Param("idProject")
-	idPermission := c.Param("idPermission")
-	result := db.Project.Permission.GetByProjectIDAndPermissionID(idPermission, idProject)
-
-	if result.IsErr() {
-		err := result.Error()
-		c.JSON(err.Code.AsInt(), err)
-		return
-	}
-
-	permissions := result.Value()
-
-	response := utils.MMap(permissions, func(_ uint, v []models.CollaboratorPermissionDB) []models.CollaboratorPermissionResponse {
-		return utils.Map(v, models.CollaboratorPermissionDB.ToResponse)
-	})
-
-	c.JSON(http.StatusOK, response)
-}
 
 func (permissionType) DeleteByID(c *gin.Context) {
 	id := c.Param("id")
@@ -494,6 +494,47 @@ func (permissionType) DeleteByID(c *gin.Context) {
 	}
 
 	result = db.Project.Permission.Delete(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
+}
+
+// > Resources
+
+func (resourcesType) CreateText(c *gin.Context) {
+	var body models.ResourceTextCreate
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to create text resource: JSON request body is invalid")
+		logger.Error("Request body: ", c.Request.Body)
+		logger.Error("Expected body: ", "{id_project: int, id_creator: int, content: string}")
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	textResource := models.ResourceTextDB{
+		ResourceDB: body.ToDB(),
+	}
+
+	result := db.Project.Resources.CreateText(textResource)
+
+	if result.IsErr() {
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
+	}
+
+	c.JSON(http.StatusCreated, result.Value().ToResponse())
+}
+
+func (resourcesType) GetTextByID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Resources.GetTextByID(id)
 
 	if result.IsErr() {
 		err := result.Error()

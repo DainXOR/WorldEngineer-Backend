@@ -5,16 +5,19 @@ import (
 	"dainxor/we/models"
 	"dainxor/we/types"
 	"fmt"
+	"strconv"
 )
 
 type settingsType struct{}
 type collaboratorType struct{}
 type permissionType struct{}
+type resourcesType struct{}
 
 type projectType struct {
 	Settings     settingsType
 	Collaborator collaboratorType
 	Permission   permissionType
+	Resources    resourcesType
 }
 
 var Project projectType
@@ -140,6 +143,45 @@ func (collaboratorType) GetByUserIDAndProjectID(userID string, projectID string)
 	)
 	return types.ResultOf(collaborator, err, collaborator.ID != 0)
 }
+func (collaboratorType) GetByProjectIDAndPermissionID(idPermission string, idProject string) types.Result[[]models.ProjectCollaboratorDB, models.ErrorResponse] {
+	int64Permission, err := strconv.ParseUint(idPermission, 10, 64)
+
+	if err == nil {
+		return types.ResultErr[[]models.ProjectCollaboratorDB](
+			models.Error(
+				types.Http.BadRequest(),
+				"bad_request",
+				"Invalid permission ID",
+			),
+		)
+	}
+
+	permissionID := uint(int64Permission)
+	collaborators := Project.Collaborator.GetByProjectID(idProject)
+
+	if collaborators.IsErr() {
+		return types.ResultErr[[]models.ProjectCollaboratorDB](collaborators.Error())
+	}
+
+	var matchingCollaborators = make([]models.ProjectCollaboratorDB, 0)
+
+	for _, collaborator := range collaborators.Value() {
+		collaboratorPermissions := Project.Permission.GetByCollaboratorID(fmt.Sprint(collaborator.ID))
+
+		if collaboratorPermissions.IsErr() {
+			continue
+		}
+
+		for _, permission := range collaboratorPermissions.Value() {
+			if permission.IDPermission == permissionID {
+				matchingCollaborators = append(matchingCollaborators, collaborator)
+				break
+			}
+		}
+	}
+
+	return types.ResultOk[[]models.ProjectCollaboratorDB, models.ErrorResponse](matchingCollaborators)
+}
 
 func (collaboratorType) GetAll() types.Result[[]models.ProjectCollaboratorDB, models.ErrorResponse] {
 	var collaborators []models.ProjectCollaboratorDB
@@ -206,32 +248,64 @@ func (permissionType) GetByCollaboratorID(id string) types.Result[[]models.Colla
 	)
 	return types.ResultOf(permission, err, len(permission) > 0)
 }
-func (permissionType) GetByProjectIDAndPermissionID(idPermission string, idProject string) types.Result[map[uint][]models.CollaboratorPermissionDB, models.ErrorResponse] {
-	collaborators := Project.Collaborator.GetByProjectID(idProject)
-
-	if collaborators.IsErr() {
-		return types.ResultErr[map[uint][]models.CollaboratorPermissionDB](collaborators.Error())
-	}
-
-	var permission = make(map[uint][]models.CollaboratorPermissionDB, len(collaborators.Value()))
-
-	for _, collaborator := range collaborators.Value() {
-		collaboratorPermissions := Project.Permission.GetByCollaboratorID(fmt.Sprint(collaborator.ID))
-		permissions, err := collaboratorPermissions.Get()
-
-		if err.IsPresent() {
-			permissions = types.OptionalOf(make([]models.CollaboratorPermissionDB, 0))
-		}
-
-		permission[uint(collaborator.ID)] = permissions.Get()
-	}
-
-	return types.ResultOk[map[uint][]models.CollaboratorPermissionDB, models.ErrorResponse](permission)
-}
 
 func (permissionType) Delete(id string) types.Result[models.CollaboratorPermissionDB, models.ErrorResponse] {
 	var permission models.CollaboratorPermissionDB
 	configs.DataBase.First(&permission, id)
 	configs.DataBase.Delete(&permission)
 	return types.ResultOk[models.CollaboratorPermissionDB, models.ErrorResponse](permission)
+}
+
+// > Resources
+
+// Currently, the resources can only be strings, but this will be changed in the future
+func (resourcesType) CreateText(resource models.ResourceTextDB) types.Result[models.ResourceDB[string], models.ErrorResponse] {
+
+	configs.DataBase.Create(&resource)
+
+	err := models.ErrorInternal("Failed to create project resource")
+
+	return types.ResultOf(resource.ResourceDB, err, resource.ID != 0)
+}
+
+func (resourcesType) GetTextByID(id string) types.Result[models.ResourceDB[string], models.ErrorResponse] {
+	var textResource models.ResourceTextDB
+	configs.DataBase.First(&textResource, id)
+
+	err := models.ErrorNotFound(
+		"Project resource not found",
+		"Project resource with ID "+id+" not found",
+	)
+
+	return types.ResultOf(textResource.ResourceDB, err, textResource.ID != 0)
+}
+func (resourcesType) GetTextByProjectID(id string) types.Result[[]models.ResourceTextDB, models.ErrorResponse] {
+	var resources []models.ResourceDB[string]
+	configs.DataBase.Where("id_project = ?", id).Find(&resources)
+
+	err := models.ErrorNotFound(
+		"Project resources not found",
+		"Project resources with project ID "+id+" not found",
+	)
+
+	textResources := make([]models.ResourceTextDB, len(resources))
+	for i, resource := range resources {
+		textResources[i] = models.ResourceTextDB{
+			ResourceDB: resource,
+		}
+	}
+
+	return types.ResultOf(textResources, err, len(resources) > 0)
+}
+
+func (resourcesType) UpdateText(resource models.ResourceTextDB) types.Result[models.ResourceTextDB, models.ErrorResponse] {
+	configs.DataBase.Save(&resource.ResourceDB)
+	return types.ResultOk[models.ResourceTextDB, models.ErrorResponse](resource)
+}
+
+func (resourcesType) DeleteTextByID(id string) types.Result[models.ResourceTextDB, models.ErrorResponse] {
+	var resource models.ResourceTextDB
+	configs.DataBase.First(&resource.ResourceDB, id)
+	configs.DataBase.Delete(&resource.ResourceDB)
+	return types.ResultOk[models.ResourceTextDB, models.ErrorResponse](resource)
 }
