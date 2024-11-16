@@ -1,26 +1,41 @@
 package types
 
-type ResourceType int
-type resource struct{}
+import "strings"
 
-var Resource resource
-
-func (r ResourceType) AsInt() int {
-	return int(r)
+type ResourceInfo struct {
+	code      int
+	extension string
 }
 
-func (resource) Text() ResourceType {
-	return 1
+type ResourceTypes struct{}
+
+var Resource ResourceTypes
+
+func (r *ResourceInfo) Code() int {
+	return r.code
 }
-func (resource) Image() ResourceType {
-	return 2
+func (r *ResourceInfo) Extension() string {
+	return r.extension
 }
-func (resource) File() ResourceType {
-	return 3
+
+func createResourceType(code int, extension string) ResourceInfo {
+	parts := strings.Split(extension, ".")
+	extension = parts[len(parts)-1]
+	return ResourceInfo{code, extension}
 }
-func (resource) Video() ResourceType {
-	return 4
+
+func (ResourceTypes) Text() ResourceInfo {
+	return createResourceType(1, "txt")
 }
-func (resource) Audio() ResourceType {
-	return 5
+func (ResourceTypes) Image(ext string) ResourceInfo {
+	return createResourceType(2, ext)
+}
+func (ResourceTypes) File(ext string) ResourceInfo {
+	return createResourceType(3, ext)
+}
+func (ResourceTypes) Video(ext string) ResourceInfo {
+	return createResourceType(4, ext)
+}
+func (ResourceTypes) Audio(ext string) ResourceInfo {
+	return createResourceType(5, ext)
 }

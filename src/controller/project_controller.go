@@ -544,3 +544,66 @@ func (resourcesType) GetTextByID(c *gin.Context) {
 
 	c.JSON(http.StatusOK, result.Value().ToResponse())
 }
+
+func (resourcesType) GetTextByProjectID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Resources.GetTextByProjectID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	resources := result.Value()
+	response := utils.Map(resources, models.ResourceTextDB.ToResponse)
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (resourcesType) UpdateTextByID(c *gin.Context) {
+	var resource models.ResourceTextDB
+	var body models.ResourceTextUpdate
+	id := c.Param("id")
+	idUint, err := strconv.Atoi(id)
+
+	if err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to update text resource: ID is invalid")
+		logger.Error("Expected ID: ", "uint")
+
+		c.JSON(http.StatusBadRequest, models.Error(
+			types.Http.BadRequest(),
+			"bad_request",
+			"ID is invalid",
+		))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to update text resource: JSON request body is invalid")
+		logger.Error("Request body: ", c.Request.Body)
+		logger.Error("Expected body: ", "{content: string}")
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result := db.Project.Resources.GetTextByID(id); result.IsErr() {
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
+	}
+
+	resource = models.ResourceTextDB{ResourceDB: body.ToDB()}
+	resource.ID = uint(idUint)
+
+	updateResult := db.Project.Resources.UpdateText(resource)
+
+	if updateResult.IsErr() {
+		c.JSON(updateResult.Error().Code.AsInt(), updateResult.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, updateResult.Value().ToResponse())
+}

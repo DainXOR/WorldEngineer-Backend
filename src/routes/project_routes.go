@@ -31,7 +31,7 @@ func ProjectRoutes(router *gin.Engine) {
 			settingsRouter.DELETE("/id/:id", controller.Project.Settings.DeleteByID)
 		}
 
-		collaboratorRouter := projectRouter.Group("/collaborator")
+		collaboratorRouter := projectRouter.Group("/collaborators")
 		{
 			collaboratorRouter.POST("/", controller.Project.Collaborator.Create)
 
@@ -60,6 +60,9 @@ func ProjectRoutes(router *gin.Engine) {
 			resourcesRouter.POST("/", controller.Project.Resources.CreateText)
 
 			resourcesRouter.GET("/id/:id", controller.Project.Resources.GetTextByID)
+			resourcesRouter.GET("/id-project/:id", controller.Project.Resources.GetTextByProjectID)
+
+			resourcesRouter.PUT("/id/:id", controller.Project.Resources.UpdateTextByID)
 		}
 	}
 }
