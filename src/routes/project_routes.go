@@ -64,5 +64,20 @@ func ProjectRoutes(router *gin.Engine) {
 
 			resourcesRouter.PUT("/id/:id", controller.Project.Resources.UpdateTextByID)
 		}
+
+		elementsRouter := projectRouter.Group("/elements")
+		{
+			charactersRouter := elementsRouter.Group("/characters")
+			{
+				charactersRouter.POST("/", controller.Project.Character.Create)
+
+			}
+
+			locationsRouter := elementsRouter.Group("/locations")
+			{
+				locationsRouter.POST("/", controller.Project.Location.Create)
+
+			}
+		}
 	}
 }

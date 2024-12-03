@@ -12,12 +12,16 @@ type settingsType struct{}
 type collaboratorType struct{}
 type permissionType struct{}
 type resourcesType struct{}
+type characterType struct{}
+type locationType struct{}
 
 type projectType struct {
 	Settings     settingsType
 	Collaborator collaboratorType
 	Permission   permissionType
 	Resources    resourcesType
+	Character    characterType
+	Location     locationType
 }
 
 var Project projectType
@@ -308,4 +312,86 @@ func (resourcesType) DeleteTextByID(id string) types.Result[models.ResourceTextD
 	configs.DataBase.First(&resource.ResourceDB, id)
 	configs.DataBase.Delete(&resource.ResourceDB)
 	return types.ResultOk[models.ResourceTextDB, models.ErrorResponse](resource)
+}
+
+// > Character
+
+func (characterType) Create(character models.ProjectCharacterDB) types.Result[models.ProjectCharacterDB, models.ErrorResponse] {
+	configs.DataBase.Create(&character)
+	return types.ResultOk[models.ProjectCharacterDB, models.ErrorResponse](character)
+}
+
+func (characterType) GetByID(id string) types.Result[models.ProjectCharacterDB, models.ErrorResponse] {
+	var character models.ProjectCharacterDB
+	configs.DataBase.First(&character, id)
+
+	err := models.ErrorNotFound(
+		"Project character not found",
+		"Project character with ID "+id+" not found",
+	)
+	return types.ResultOf(character, err, character.ID != 0)
+}
+
+func (characterType) GetByProjectID(id string) types.Result[[]models.ProjectCharacterDB, models.ErrorResponse] {
+	var characters []models.ProjectCharacterDB
+	configs.DataBase.Where("id_project = ?", id).Find(&characters)
+
+	err := models.ErrorNotFound(
+		"Project characters not found",
+		"Project characters with project ID "+id+" not found",
+	)
+	return types.ResultOf(characters, err, len(characters) > 0)
+}
+
+func (characterType) Update(character models.ProjectCharacterDB) types.Result[models.ProjectCharacterDB, models.ErrorResponse] {
+	configs.DataBase.Save(&character)
+	return types.ResultOk[models.ProjectCharacterDB, models.ErrorResponse](character)
+}
+
+func (characterType) Delete(id string) types.Result[models.ProjectCharacterDB, models.ErrorResponse] {
+	var character models.ProjectCharacterDB
+	configs.DataBase.First(&character, id)
+	configs.DataBase.Delete(&character)
+	return types.ResultOk[models.ProjectCharacterDB, models.ErrorResponse](character)
+}
+
+// > Location
+
+func (locationType) Create(location models.ProjectLocationDB) types.Result[models.ProjectLocationDB, models.ErrorResponse] {
+	configs.DataBase.Create(&location)
+	return types.ResultOk[models.ProjectLocationDB, models.ErrorResponse](location)
+}
+
+func (locationType) GetByID(id string) types.Result[models.ProjectLocationDB, models.ErrorResponse] {
+	var location models.ProjectLocationDB
+	configs.DataBase.First(&location, id)
+
+	err := models.ErrorNotFound(
+		"Project location not found",
+		"Project location with ID "+id+" not found",
+	)
+	return types.ResultOf(location, err, location.ID != 0)
+}
+
+func (locationType) GetByProjectID(id string) types.Result[[]models.ProjectLocationDB, models.ErrorResponse] {
+	var locations []models.ProjectLocationDB
+	configs.DataBase.Where("id_project = ?", id).Find(&locations)
+
+	err := models.ErrorNotFound(
+		"Project locations not found",
+		"Project locations with project ID "+id+" not found",
+	)
+	return types.ResultOf(locations, err, len(locations) > 0)
+}
+
+func (locationType) Update(location models.ProjectLocationDB) types.Result[models.ProjectLocationDB, models.ErrorResponse] {
+	configs.DataBase.Save(&location)
+	return types.ResultOk[models.ProjectLocationDB, models.ErrorResponse](location)
+}
+
+func (locationType) Delete(id string) types.Result[models.ProjectLocationDB, models.ErrorResponse] {
+	var location models.ProjectLocationDB
+	configs.DataBase.First(&location, id)
+	configs.DataBase.Delete(&location)
+	return types.ResultOk[models.ProjectLocationDB, models.ErrorResponse](location)
 }

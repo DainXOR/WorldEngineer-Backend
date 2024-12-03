@@ -17,12 +17,16 @@ type settingsType struct{}
 type collaboratorType struct{}
 type permissionType struct{}
 type resourcesType struct{}
+type characterType struct{}
+type locationType struct{}
 
 type projectType struct {
 	Settings     settingsType
 	Collaborator collaboratorType
 	Permission   permissionType
 	Resources    resourcesType
+	Character    characterType
+	Location     locationType
 }
 
 var Project projectType
@@ -606,4 +610,248 @@ func (resourcesType) UpdateTextByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, updateResult.Value().ToResponse())
+}
+
+// > Character
+
+func (characterType) Create(c *gin.Context) {
+	var body models.ProjectCharacterCreate
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to create project character: JSON request body is invalid")
+		logger.Error("Request body: ", c.Request.Body)
+		logger.Error("Expected body: ", "{id_project: int, name: string, description: string}")
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result := db.Project.Character.Create(body.ToDB())
+
+	if result.IsErr() {
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
+	}
+
+	c.JSON(http.StatusCreated, result.Value().ToResponse())
+}
+
+func (characterType) GetByID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Character.GetByID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
+}
+
+func (characterType) GetByProjectID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Character.GetByProjectID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	characters := result.Value()
+	response := utils.Map(characters, models.ProjectCharacterDB.ToResponse)
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (characterType) UpdateByID(c *gin.Context) {
+	var character models.ProjectCharacterDB
+	var body models.ProjectCharacterUpdate
+	id := c.Param("id")
+	idUint, err := strconv.Atoi(id)
+
+	if err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to update project character: ID is invalid")
+		logger.Error("Expected ID: ", "uint")
+
+		c.JSON(http.StatusBadRequest, models.Error(
+			types.Http.BadRequest(),
+			"bad_request",
+			"ID is invalid",
+		))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to update project character: JSON request body is invalid")
+		logger.Error("Request body: ", c.Request.Body)
+		logger.Error("Expected body: ", "{name: string, description: string}")
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result := db.Project.Character.GetByID(id); result.IsErr() {
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
+	}
+
+	character = body.ToDB()
+	character.ID = uint(idUint)
+
+	updateResult := db.Project.Character.Update(character)
+
+	if updateResult.IsErr() {
+		c.JSON(updateResult.Error().Code.AsInt(), updateResult.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, updateResult.Value().ToResponse())
+}
+
+func (characterType) DeleteByID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Character.GetByID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	result = db.Project.Character.Delete(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
+}
+
+// > Location
+
+func (locationType) Create(c *gin.Context) {
+	var body models.ProjectLocationCreate
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to create project location: JSON request body is invalid")
+		logger.Error("Request body: ", c.Request.Body)
+		logger.Error("Expected body: ", "{id_project: int, name: string, description: string}")
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result := db.Project.Location.Create(body.ToDB())
+
+	if result.IsErr() {
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
+	}
+
+	c.JSON(http.StatusCreated, result.Value().ToResponse())
+}
+
+func (locationType) GetByID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Location.GetByID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
+}
+
+func (locationType) GetByProjectID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Location.GetByProjectID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	locations := result.Value()
+	response := utils.Map(locations, models.ProjectLocationDB.ToResponse)
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (locationType) UpdateByID(c *gin.Context) {
+	var location models.ProjectLocationDB
+	var body models.ProjectLocationUpdate
+	id := c.Param("id")
+	idUint, err := strconv.Atoi(id)
+
+	if err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to update project location: ID is invalid")
+		logger.Error("Expected ID: ", "uint")
+
+		c.JSON(http.StatusBadRequest, models.Error(
+			types.Http.BadRequest(),
+			"bad_request",
+			"ID is invalid",
+		))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to update project location: JSON request body is invalid")
+		logger.Error("Request body: ", c.Request.Body)
+		logger.Error("Expected body: ", "{name: string, description: string}")
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result := db.Project.Location.GetByID(id); result.IsErr() {
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
+	}
+
+	location = body.ToDB()
+	location.ID = uint(idUint)
+
+	updateResult := db.Project.Location.Update(location)
+
+	if updateResult.IsErr() {
+		c.JSON(updateResult.Error().Code.AsInt(), updateResult.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, updateResult.Value().ToResponse())
+}
+
+func (locationType) DeleteByID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Location.GetByID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	result = db.Project.Location.Delete(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
 }
