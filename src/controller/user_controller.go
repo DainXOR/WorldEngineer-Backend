@@ -1,16 +1,21 @@
 package controller
 
 import (
-	"dainxor/we/configs"
-	"dainxor/we/logger"
+	"dainxor/we/base/logger"
+	"dainxor/we/db"
 	"dainxor/we/models"
+	"dainxor/we/types"
+
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func UserCreate(c *gin.Context) {
-	var user models.UserDB
+type userType struct{}
+
+var User userType
+
+func (userType) Create(c *gin.Context) {
 	var body models.UserCreate
 
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -19,81 +24,75 @@ func UserCreate(c *gin.Context) {
 		logger.Error("Request body: ", c.Request.Body)
 		logger.Error("Expected body: ", "{username: string, email: string}")
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest,
+			models.Error(
+				types.Http.BadRequest(),
+				"conflict",
+				"Email is already in use",
+				"Expected body: {username: string, email: string}",
+			))
 		return
 	}
 
-	user.Username = body.Username
-	user.Email = body.Email
-	user.CreatedAt = configs.DB.NowFunc()
-	user.UpdatedAt = configs.DB.NowFunc()
-	user.IDStatus = 1
-	user.StatusTimeStamp = configs.DB.NowFunc()
+	logger.Debug("Creating user: ", body)
+	logger.Debug("Username: ", body.Username)
+	logger.Debug("NameTag: ", body.NameTag)
+	logger.Debug("Email: ", body.Email)
 
-	configs.DB.Create(&user)
+	result := db.User.CreateUser(body)
 
-	c.JSON(http.StatusCreated,
-		models.UserResponse{
-			ID:       user.ID,
-			Username: user.Username,
-			Email:    user.Email,
-			IDStatus: user.IDStatus,
-		})
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	user := result.Value()
+	c.JSON(http.StatusCreated, user.ToResponse())
 }
 
-func UserGetAll(c *gin.Context) {
-	var users []models.UserDB
-	var response []models.UserResponse
+func (userType) GetAll(c *gin.Context) {
+	result := db.User.GetAllUsers()
 
-	configs.DB.Find(&users)
-
-	for _, user := range users {
-		response = append(response, models.UserResponse{ID: user.ID, Username: user.Username, Email: user.Email, IDStatus: user.IDStatus})
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
 	}
+
+	users := result.Value()
+	response := types.Map(users, func(u models.UserDB) models.UserResponse { return u.ToResponse() })
 
 	c.JSON(http.StatusOK, response)
 }
-func UserGetByID(c *gin.Context) {
-	var user models.UserDB
+func (userType) GetByID(c *gin.Context) {
+	result := db.User.GetUserByID(c.Param("id"))
 
-	id := c.Param("id")
-
-	configs.DB.First(&user, id)
-
-	c.JSON(http.StatusOK,
-		models.UserResponse{
-			ID:       user.ID,
-			Username: user.Username,
-			Email:    user.Email,
-			IDStatus: user.IDStatus,
-		})
-}
-func UserGetByStatusID(c *gin.Context) {
-	var users []models.UserDB
-	var response []models.UserResponse
-
-	id := c.Param("id")
-
-	configs.DB.Where("id_status = ?", id).Find(&users)
-
-	for _, user := range users {
-		response = append(response,
-			models.UserResponse{
-				ID:       user.ID,
-				Username: user.Username,
-				Email:    user.Email,
-				IDStatus: user.IDStatus,
-			})
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
 	}
 
-	c.JSON(http.StatusOK, users)
+	user := result.Value()
+	c.JSON(http.StatusOK, user.ToResponse())
 }
+func (userType) GetAllByStatusID(c *gin.Context) {
+	result := db.User.GetAllUsersByStatusID(c.Param("id"))
 
-func UserUpdateByID(c *gin.Context) {
-	var user models.UserDB
-	var body models.UserCreate
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
 
-	id := c.Param("id")
+	users := result.Value()
+	response := types.Map(users, func(u models.UserDB) models.UserResponse { return u.ToResponse() })
+
+	c.JSON(http.StatusOK, response)
+}
+func (userType) UpdateByID(c *gin.Context) {
+	var body models.UserUpdate
 
 	if err := c.ShouldBindJSON(&body); err != nil {
 		logger.Error(err.Error())
@@ -101,32 +100,33 @@ func UserUpdateByID(c *gin.Context) {
 		logger.Error("Request body: ", c.Request.Body)
 		logger.Error("Expected body: ", "{username: string, email: string}")
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": "JSON request body is invalid"})
+		c.JSON(http.StatusBadRequest,
+			models.Error(
+				types.Http.BadRequest(),
+				"bad_request",
+				"JSON request body is invalid",
+				"Expected body: {username: string, email: string}",
+			))
 		return
 	}
 
-	configs.DB.First(&user, id)
+	response := db.User.UpdateUserByID(c.Param("id"), body)
 
-	user.Username = body.Username
-	user.Email = body.Email
-	user.UpdatedAt = configs.DB.NowFunc()
+	if response.IsErr() {
+		err := response.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
 
-	configs.DB.Save(&user)
-
-	c.JSON(http.StatusOK,
-		models.UserResponse{
-			ID:       user.ID,
-			Username: user.Username,
-			Email:    user.Email,
-			IDStatus: user.IDStatus,
-		})
+	c.JSON(http.StatusOK, response.Value().ToResponse())
 }
+func (userType) DeleteByID(c *gin.Context) {
+	result := db.User.DeleteUserByID(c.Param("id"))
 
-func UserDeleteByID(c *gin.Context) {
-	var user models.UserDB
-	id := c.Param("id")
-
-	configs.DB.Delete(&user, id)
+	if result.IsErr() {
+		c.JSON(http.StatusInternalServerError, result.Error())
+		return
+	}
 
 	c.JSON(http.StatusNoContent, gin.H{})
 }
