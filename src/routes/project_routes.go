@@ -71,6 +71,15 @@ func ProjectRoutes(router *gin.Engine) {
 			{
 				charactersRouter.POST("/", controller.Project.Character.Create)
 
+				charactersRouter.GET("/id/:id", controller.Project.Character.GetByID)
+				charactersRouter.GET("/id-project/:id", controller.Project.Character.GetByProjectID)
+
+				charactersRouter.POST("/relation/", controller.Project.Character.CreateRelation)
+
+				charactersRouter.GET("/relation/id/:id", controller.Project.Character.GetRelationByID)
+				charactersRouter.GET("/relation/id-project/:id", controller.Project.Character.GetRelationsByProjectID)
+				charactersRouter.GET("/relation/id-character/:id", controller.Project.Character.GetRelationsByCharacterID)
+
 			}
 
 			locationsRouter := elementsRouter.Group("/locations")

@@ -14,6 +14,7 @@ type permissionType struct{}
 type resourcesType struct{}
 type characterType struct{}
 type locationType struct{}
+type elementType struct{}
 
 type projectType struct {
 	Settings     settingsType
@@ -22,6 +23,7 @@ type projectType struct {
 	Resources    resourcesType
 	Character    characterType
 	Location     locationType
+	StoryElement elementType
 }
 
 var Project projectType
@@ -331,6 +333,16 @@ func (characterType) GetByID(id string) types.Result[models.ProjectCharacterDB, 
 	)
 	return types.ResultOf(character, err, character.ID != 0)
 }
+func (characterType) GetByName(name string) types.Result[models.ProjectCharacterDB, models.ErrorResponse] {
+	var character models.ProjectCharacterDB
+	configs.DataBase.Where("name = ?", name).First(&character)
+
+	err := models.ErrorNotFound(
+		"Project character not found",
+		"Project character with name "+name+" not found",
+	)
+	return types.ResultOf(character, err, character.ID != 0)
+}
 
 func (characterType) GetByProjectID(id string) types.Result[[]models.ProjectCharacterDB, models.ErrorResponse] {
 	var characters []models.ProjectCharacterDB
@@ -355,6 +367,137 @@ func (characterType) Delete(id string) types.Result[models.ProjectCharacterDB, m
 	return types.ResultOk[models.ProjectCharacterDB, models.ErrorResponse](character)
 }
 
+// > Character Relation
+
+func (characterType) CreateRelation(relation models.ProjectCharacterRelationDB) types.Result[models.ProjectCharacterRelationDB, models.ErrorResponse] {
+	configs.DataBase.Create(&relation)
+	return types.ResultOk[models.ProjectCharacterRelationDB, models.ErrorResponse](relation)
+}
+
+func (characterType) GetRelationByID(id string) types.Result[models.ProjectCharacterRelationDB, models.ErrorResponse] {
+	var relation models.ProjectCharacterRelationDB
+	configs.DataBase.First(&relation, id)
+
+	err := models.ErrorNotFound(
+		"Project character relation not found",
+		"Project character relation with ID "+id+" not found",
+	)
+	return types.ResultOf(relation, err, relation.ID != 0)
+}
+func (characterType) GetRelationByCharacterIDs(idCharacterOne string, idCharacterTwo string) types.Result[models.ProjectCharacterRelationDB, models.ErrorResponse] {
+	var relation models.ProjectCharacterRelationDB
+	configs.DataBase.Where("id_character_one = ? AND id_character_two = ?", idCharacterOne, idCharacterTwo).First(&relation)
+
+	err := models.ErrorNotFound(
+		"Project character relation not found",
+		"Project character relation with character IDs "+idCharacterOne+" and "+idCharacterTwo+" not found",
+	)
+	return types.ResultOf(relation, err, relation.ID != 0)
+}
+
+func (characterType) GetRelationsByProjectID(id string) types.Result[[]models.ProjectCharacterRelationDB, models.ErrorResponse] {
+	var relations []models.ProjectCharacterRelationDB
+	configs.DataBase.Where("id_project = ?", id).Find(&relations)
+
+	err := models.ErrorNotFound(
+		"No relations found for this project",
+		"Project character relations with project ID "+id+" not found",
+	)
+	return types.ResultOf(relations, err, len(relations) > 0)
+}
+func (characterType) GetRelationsByCharacterOneID(id uint) types.Result[[]models.ProjectCharacterRelationDB, models.ErrorResponse] {
+	var relations []models.ProjectCharacterRelationDB
+	configs.DataBase.Where("id_character_one = ?", id).Find(&relations)
+
+	err := models.ErrorNotFound(
+		"No relations found for this character",
+		"Project character relations with character ID "+fmt.Sprint(id)+" not found",
+	)
+	return types.ResultOf(relations, err, len(relations) > 0)
+}
+func (characterType) GetRelationsByCharacterTwoID(id uint) types.Result[[]models.ProjectCharacterRelationDB, models.ErrorResponse] {
+	var relations []models.ProjectCharacterRelationDB
+	configs.DataBase.Where("id_character_two = ?", id).Find(&relations)
+
+	err := models.ErrorNotFound(
+		"No relations found for this character",
+		"Project character relations with character ID "+fmt.Sprint(id)+" not found",
+	)
+	return types.ResultOf(relations, err, len(relations) > 0)
+}
+func (characterType) GetRelationsByCharacterID(id string) types.Result[[]models.ProjectCharacterRelationDB, models.ErrorResponse] {
+	var relations []models.ProjectCharacterRelationDB
+	configs.DataBase.Where("id_character_one = ? OR id_character_two = ?", id, id).Find(&relations)
+
+	err := models.ErrorNotFound(
+		"No relations found for this character",
+		"Project character relations with character ID "+id+" not found",
+	)
+	return types.ResultOf(relations, err, len(relations) > 0)
+}
+func (characterType) GetRelationsByType(id uint) types.Result[[]models.ProjectCharacterRelationDB, models.ErrorResponse] {
+	var relations []models.ProjectCharacterRelationDB
+	configs.DataBase.Where("id_type = ?", id).Find(&relations)
+
+	err := models.ErrorNotFound(
+		"No relations found for this type",
+		"Project character relations with type ID "+fmt.Sprint(id)+" not found",
+	)
+	return types.ResultOf(relations, err, len(relations) > 0)
+}
+
+func (characterType) UpdateRelation(relation models.ProjectCharacterRelationDB) types.Result[models.ProjectCharacterRelationDB, models.ErrorResponse] {
+	configs.DataBase.Save(&relation)
+	return types.ResultOk[models.ProjectCharacterRelationDB, models.ErrorResponse](relation)
+}
+
+func (characterType) DeleteRelation(id string) types.Result[models.ProjectCharacterRelationDB, models.ErrorResponse] {
+	var relation models.ProjectCharacterRelationDB
+	configs.DataBase.First(&relation, id)
+	configs.DataBase.Delete(&relation)
+	return types.ResultOk[models.ProjectCharacterRelationDB, models.ErrorResponse](relation)
+}
+
+// > Character Relation Type
+
+func (characterType) CreateRelationType(relationType models.CharacterRelationTypeDB) types.Result[models.CharacterRelationTypeDB, models.ErrorResponse] {
+	configs.DataBase.Create(&relationType)
+	return types.ResultOk[models.CharacterRelationTypeDB, models.ErrorResponse](relationType)
+}
+
+func (characterType) GetRelationTypeByID(id string) types.Result[models.CharacterRelationTypeDB, models.ErrorResponse] {
+	var relationType models.CharacterRelationTypeDB
+	configs.DataBase.First(&relationType, id)
+
+	err := models.ErrorNotFound(
+		"Character relation type not found",
+		"Character relation type with ID "+id+" not found",
+	)
+	return types.ResultOf(relationType, err, relationType.ID != 0)
+}
+
+func (characterType) GetAllRelationTypes() types.Result[[]models.CharacterRelationTypeDB, models.ErrorResponse] {
+	var relationTypes []models.CharacterRelationTypeDB
+	configs.DataBase.Find(&relationTypes)
+
+	err := models.ErrorNotFound(
+		"Character relation types not found",
+	)
+	return types.ResultOf(relationTypes, err, len(relationTypes) > 0)
+}
+
+func (characterType) UpdateRelationType(relationType models.CharacterRelationTypeDB) types.Result[models.CharacterRelationTypeDB, models.ErrorResponse] {
+	configs.DataBase.Save(&relationType)
+	return types.ResultOk[models.CharacterRelationTypeDB, models.ErrorResponse](relationType)
+}
+
+func (characterType) DeleteRelationType(id string) types.Result[models.CharacterRelationTypeDB, models.ErrorResponse] {
+	var relationType models.CharacterRelationTypeDB
+	configs.DataBase.First(&relationType, id)
+	configs.DataBase.Delete(&relationType)
+	return types.ResultOk[models.CharacterRelationTypeDB, models.ErrorResponse](relationType)
+}
+
 // > Location
 
 func (locationType) Create(location models.ProjectLocationDB) types.Result[models.ProjectLocationDB, models.ErrorResponse] {
@@ -369,6 +512,16 @@ func (locationType) GetByID(id string) types.Result[models.ProjectLocationDB, mo
 	err := models.ErrorNotFound(
 		"Project location not found",
 		"Project location with ID "+id+" not found",
+	)
+	return types.ResultOf(location, err, location.ID != 0)
+}
+func (locationType) GetByName(name string) types.Result[models.ProjectLocationDB, models.ErrorResponse] {
+	var location models.ProjectLocationDB
+	configs.DataBase.Where("name = ?", name).First(&location)
+
+	err := models.ErrorNotFound(
+		"Project location not found",
+		"Project location with name "+name+" not found",
 	)
 	return types.ResultOf(location, err, location.ID != 0)
 }
@@ -394,4 +547,55 @@ func (locationType) Delete(id string) types.Result[models.ProjectLocationDB, mod
 	configs.DataBase.First(&location, id)
 	configs.DataBase.Delete(&location)
 	return types.ResultOk[models.ProjectLocationDB, models.ErrorResponse](location)
+}
+
+// > Story Element
+
+func (elementType) Create(element models.ProjectStoryElementDB) types.Result[models.ProjectStoryElementDB, models.ErrorResponse] {
+	configs.DataBase.Create(&element)
+	return types.ResultOk[models.ProjectStoryElementDB, models.ErrorResponse](element)
+}
+
+func (elementType) GetByID(id string) types.Result[models.ProjectStoryElementDB, models.ErrorResponse] {
+	var element models.ProjectStoryElementDB
+	configs.DataBase.First(&element, id)
+
+	err := models.ErrorNotFound(
+		"Project story element not found",
+		"Project story element with ID "+id+" not found",
+	)
+	return types.ResultOf(element, err, element.ID != 0)
+}
+func (elementType) GetByName(name string) types.Result[models.ProjectStoryElementDB, models.ErrorResponse] {
+	var element models.ProjectStoryElementDB
+	configs.DataBase.Where("name = ?", name).First(&element)
+
+	err := models.ErrorNotFound(
+		"Project story element not found",
+		"Project story element with name "+name+" not found",
+	)
+	return types.ResultOf(element, err, element.ID != 0)
+}
+
+func (elementType) GetByProjectID(id string) types.Result[[]models.ProjectStoryElementDB, models.ErrorResponse] {
+	var elements []models.ProjectStoryElementDB
+	configs.DataBase.Where("id_project = ?", id).Find(&elements)
+
+	err := models.ErrorNotFound(
+		"Project story elements not found",
+		"Project story elements with project ID "+id+" not found",
+	)
+	return types.ResultOf(elements, err, len(elements) > 0)
+}
+
+func (elementType) Update(element models.ProjectStoryElementDB) types.Result[models.ProjectStoryElementDB, models.ErrorResponse] {
+	configs.DataBase.Save(&element)
+	return types.ResultOk[models.ProjectStoryElementDB, models.ErrorResponse](element)
+}
+
+func (elementType) Delete(id string) types.Result[models.ProjectStoryElementDB, models.ErrorResponse] {
+	var element models.ProjectStoryElementDB
+	configs.DataBase.First(&element, id)
+	configs.DataBase.Delete(&element)
+	return types.ResultOk[models.ProjectStoryElementDB, models.ErrorResponse](element)
 }

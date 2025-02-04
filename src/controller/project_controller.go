@@ -19,6 +19,7 @@ type permissionType struct{}
 type resourcesType struct{}
 type characterType struct{}
 type locationType struct{}
+type elementType struct{}
 
 type projectType struct {
 	Settings     settingsType
@@ -27,6 +28,7 @@ type projectType struct {
 	Resources    resourcesType
 	Character    characterType
 	Location     locationType
+	StoryElement elementType
 }
 
 var Project projectType
@@ -734,6 +736,158 @@ func (characterType) DeleteByID(c *gin.Context) {
 	c.JSON(http.StatusOK, result.Value().ToResponse())
 }
 
+// > Character Relation
+
+func (characterType) CreateRelation(c *gin.Context) {
+	var body models.ProjectCharacterRelationCreate
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to create project character relation: JSON request body is invalid")
+		logger.Error("Request body: ", c.Request.Body)
+		logger.Error("Expected body: ", "{id_project: int, id_character_one: int, id_character_two: int, id_type: int, name: string}")
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result := db.Project.Character.CreateRelation(body.ToDB())
+
+	if result.IsErr() {
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
+	}
+
+	c.JSON(http.StatusCreated, result.Value().ToResponse())
+}
+
+func (characterType) GetRelationByID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Character.GetRelationByID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
+}
+func (characterType) GetRelationByCharacterIDs(c *gin.Context) {
+	idCharacterOne := c.Param("idCharacterOne")
+	idCharacterTwo := c.Param("idCharacterTwo")
+	result := db.Project.Character.GetRelationByCharacterIDs(idCharacterOne, idCharacterTwo)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
+}
+
+func (characterType) GetRelationsByProjectID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Character.GetRelationsByProjectID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	relations := result.Value()
+	response := utils.Map(relations, models.ProjectCharacterRelationDB.ToResponse)
+
+	c.JSON(http.StatusOK, response)
+}
+func (characterType) GetRelationsByCharacterID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Character.GetRelationsByCharacterID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	relations := result.Value()
+	response := utils.Map(relations, models.ProjectCharacterRelationDB.ToResponse)
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (characterType) UpdateRelationByID(c *gin.Context) {
+	var relation models.ProjectCharacterRelationDB
+	var body models.ProjectCharacterRelationUpdate
+	id := c.Param("id")
+	idUint, err := strconv.Atoi(id)
+
+	if err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to update project character relation: ID is invalid")
+		logger.Error("Expected ID: ", "uint")
+
+		c.JSON(http.StatusBadRequest, models.Error(
+			types.Http.BadRequest(),
+			"bad_request",
+			"ID is invalid",
+		))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to update project character relation: JSON request body is invalid")
+		logger.Error("Request body: ", c.Request.Body)
+		logger.Error("Expected body: ", "{name: string}")
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result := db.Project.Character.GetRelationByID(id); result.IsErr() {
+		logger.Error(result.Error().Code.AsInt())
+		logger.Error(result.Error().Message)
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
+	}
+
+	relation = body.ToDB()
+	relation.ID = uint(idUint)
+
+	updateResult := db.Project.Character.UpdateRelation(relation)
+
+	if updateResult.IsErr() {
+		c.JSON(updateResult.Error().Code.AsInt(), updateResult.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, updateResult.Value().ToResponse())
+}
+
+func (characterType) DeleteRelationByID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.Character.GetRelationByID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	result = db.Project.Character.DeleteRelation(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
+}
+
 // > Location
 
 func (locationType) Create(c *gin.Context) {
@@ -846,6 +1000,140 @@ func (locationType) DeleteByID(c *gin.Context) {
 	}
 
 	result = db.Project.Location.Delete(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
+}
+
+// > Story Element
+
+func (elementType) Create(c *gin.Context) {
+	var body models.ProjectStoryElementCreate
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to create project story element: JSON request body is invalid")
+		logger.Error("Request body: ", c.Request.Body)
+		logger.Error("Expected body: ", "{id_project: int, name: string, description: string}")
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	result := db.Project.StoryElement.Create(body.ToDB())
+
+	if result.IsErr() {
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
+	}
+
+	c.JSON(http.StatusCreated, result.Value().ToResponse())
+}
+
+func (elementType) GetByID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.StoryElement.GetByID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
+}
+func (elementType) GetByName(c *gin.Context) {
+	name := c.Param("name")
+	result := db.Project.StoryElement.GetByName(name)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	c.JSON(http.StatusOK, result.Value().ToResponse())
+}
+
+func (elementType) GetByProjectID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.StoryElement.GetByProjectID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	elements := result.Value()
+	response := utils.Map(elements, models.ProjectStoryElementDB.ToResponse)
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (elementType) UpdateByID(c *gin.Context) {
+	var element models.ProjectStoryElementDB
+	var body models.ProjectStoryElementUpdate
+	id := c.Param("id")
+	idUint, err := strconv.Atoi(id)
+
+	if err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to update project story element: ID is invalid")
+		logger.Error("Expected ID: ", "uint")
+
+		c.JSON(http.StatusBadRequest, models.Error(
+			types.Http.BadRequest(),
+			"bad_request",
+			"ID is invalid",
+		))
+		return
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		logger.Error(err.Error())
+		logger.Error("Failed to update project story element: JSON request body is invalid")
+		logger.Error("Request body: ", c.Request.Body)
+		logger.Error("Expected body: ", "{name: string, description: string}")
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if result := db.Project.StoryElement.GetByID(id); result.IsErr() {
+		c.JSON(result.Error().Code.AsInt(), result.Error())
+		return
+	}
+
+	element = body.ToDB()
+	element.ID = uint(idUint)
+
+	updateResult := db.Project.StoryElement.Update(element)
+
+	if updateResult.IsErr() {
+		c.JSON(updateResult.Error().Code.AsInt(), updateResult.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, updateResult.Value().ToResponse())
+}
+
+func (elementType) DeleteByID(c *gin.Context) {
+	id := c.Param("id")
+	result := db.Project.StoryElement.GetByID(id)
+
+	if result.IsErr() {
+		err := result.Error()
+		c.JSON(err.Code.AsInt(), err)
+		return
+	}
+
+	result = db.Project.StoryElement.Delete(id)
 
 	if result.IsErr() {
 		err := result.Error()
