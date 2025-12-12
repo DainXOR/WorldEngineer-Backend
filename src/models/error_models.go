@@ -1,15 +1,18 @@
 package models
 
-import "dainxor/we/types"
+import (
+	"dainxor/we/types"
+	"errors"
+	"fmt"
+)
 
 type ErrorResponse struct {
-	Code    types.HttpCode `json:"code" default:"500"`
-	Type    string         `json:"type" default:"internal"`
-	Message string         `json:"message" default:""`
-	Detail  string         `json:"detail" default:""`
+	Code   types.HttpCode `json:"code"`
+	Err    error          `json:"error"`
+	Detail string         `json:"detail"`
 }
 
-func Error(code types.HttpCode, type_ string, information ...string) ErrorResponse {
+func Error(code types.HttpCode, information ...string) ErrorResponse {
 	message := ""
 	detail := ""
 
@@ -21,17 +24,20 @@ func Error(code types.HttpCode, type_ string, information ...string) ErrorRespon
 	}
 
 	return ErrorResponse{
-		Code:    code,
-		Type:    type_,
-		Message: message,
-		Detail:  detail,
+		Code:   code,
+		Err:    errors.New(message),
+		Detail: detail,
 	}
 }
 
+func (m *ErrorResponse) Error() string {
+	return fmt.Sprintf("%s (%s): %s - %s", m.Code.Name(), m.Code.AsString(), m.Err, m.Detail)
+}
+
 func ErrorNotFound(information ...string) ErrorResponse {
-	return Error(types.Http.NotFound(), "not_found", information...)
+	return Error(types.Http.NotFound(), information...)
 }
 
 func ErrorInternal(information ...string) ErrorResponse {
-	return Error(types.Http.InternalServerError(), "internal", information...)
+	return Error(types.Http.InternalServerError(), information...)
 }

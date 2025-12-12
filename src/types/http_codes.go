@@ -1,6 +1,9 @@
 package types
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 type HttpCode int
 type httpCode struct{}
@@ -9,6 +12,12 @@ var Http httpCode
 
 func (c HttpCode) AsInt() int {
 	return int(c)
+}
+func (c HttpCode) AsString() string {
+	return fmt.Sprint(c.AsInt())
+}
+func (c HttpCode) Name() string {
+	return http.StatusText(c.AsInt())
 }
 
 // 2xx Success
